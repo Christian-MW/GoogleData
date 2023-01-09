@@ -13,12 +13,15 @@ import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.SheetsScopes;
+import com.google.api.services.slides.v1.SlidesScopes;
 
 import GoogleData.sheet.impl.GoogleImpl;
+import GoogleData.sheet.impl.GoogleSlideImpl;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -36,9 +39,24 @@ public class GoogleAuthorizationConfig {
 
     
     private static final List<String> SCOPES = Collections.singletonList(SheetsScopes.SPREADSHEETS);
+    private static final List<String> SCOPESSLIDE = Collections.singletonList(SlidesScopes.PRESENTATIONS);
     
-    public static Credential getCredentialsServiceAccount(NetHttpTransport httpTransport, JsonFactory jsonFactory, String credentialsFilePath) throws IOException {
-        InputStream in = GoogleImpl.class.getResourceAsStream(credentialsFilePath);
-        return GoogleCredential.fromStream(in, httpTransport, jsonFactory).createScoped(SCOPES);
-    }
+	public static Credential getCredentialsServiceAccount(NetHttpTransport httpTransport, JsonFactory jsonFactory,
+			String credentialsFilePath) throws IOException {
+		InputStream in = GoogleImpl.class.getResourceAsStream(credentialsFilePath);
+		return GoogleCredential.fromStream(in, httpTransport, jsonFactory).createScoped(SCOPES);
+	}
+    
+	public static Credential getCredentialsServiceAccountSlide(NetHttpTransport HTTP_TRANSPORT, JsonFactory jsonFactory,
+			String credentialsFilePath) throws IOException {
+		String TOKENS_DIRECTORY_PATH = "tokens";
+
+		// Load client secrets.
+		InputStream in = GoogleSlideImpl.class.getResourceAsStream(credentialsFilePath);
+		if (in == null) {
+			throw new FileNotFoundException("Resource not found: " + credentialsFilePath);
+		}
+		return GoogleCredential.fromStream(in, HTTP_TRANSPORT, jsonFactory).createScoped(SCOPESSLIDE);
+
+	}
 }

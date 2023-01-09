@@ -45,6 +45,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
@@ -60,6 +61,7 @@ import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.util.store.MemoryDataStoreFactory;
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.common.base.CharMatcher;
 import com.google.api.client.http.HttpRequestInitializer;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -89,6 +91,8 @@ public class GoogleImpl implements GoogleService {
     private String FILE_COLUMNS_MELT;
     @Value("${file.columns.melt2}")
     private String FILE_COLUMNS_MELT2;
+    @Value("${file.columns.melt.alcance}")
+    private String FILE_COLUMNS_MELT_ALCANCE;
     @Value("${terms.melt.files}")
     private String TEMRS_MELT_FILES;
     @Value("${credentials.file.path}")
@@ -463,6 +467,7 @@ public class GoogleImpl implements GoogleService {
 		
 		UpdateSheetMeltResponse result = new UpdateSheetMeltResponse();
 		try {
+			String charsToRetain = "0123456789";
 			Sheets service = getServiceSheet();
 			//Obtenemos las hojas existentes del Spreadsheet enviado
 			SheetRequest reqListSheets = new SheetRequest();
@@ -472,6 +477,7 @@ public class GoogleImpl implements GoogleService {
 			String[] headersValMelt = headersFileMelt.split(",");
 			String Search = "";
 			String[] fileEndsMelt = TEMRS_MELT_FILES.toString().split(",");
+			Boolean isNew = false;
 			for (ObjMelt itemOBJ :request.getObjectResult()) {
 				Integer RangeCount = 0;
 				Boolean existsheet = false;
@@ -503,7 +509,7 @@ public class GoogleImpl implements GoogleService {
 			        //Validamos si la hoja del sheet contiene datos
 			        //Si esta vacía habrá que agregar los encabezados
 			        if (restGet.objectResult == null) {
-			        	
+			        	isNew = true;
 			        	String[] headers = null;
 			        	//Agregar encabezados
 			        	if (!addHeaders) {
@@ -525,8 +531,11 @@ public class GoogleImpl implements GoogleService {
 				        restGetRaw = getDataSheetByFilter("RAW", request.getSpreadsheet_id(), hoja.trim());
 				        addHeaders= true;
 			        }
-			        
-			        Integer AllItems = restGetRaw.objectResult.size();
+			        Integer AllItems = 0;
+			        if (isNew) 
+			        	AllItems = restGetRaw.objectResult.size();
+			        else
+			        	AllItems = restGetRaw.objectResult.size() + 2;
 			        
 			        List<ObjMelt> elementFile = new ArrayList<ObjMelt>();
 			        for (ObjMelt item : request.getObjectResult()) {
@@ -542,9 +551,10 @@ public class GoogleImpl implements GoogleService {
 							List<List<Object>> values = new ArrayList<List<Object>>();
 							List<Object> val = new ArrayList<Object>();
 							val.add(item.getSearch());
-							val.add(item.getTotalmentions());
-							val.add(item.getMentionsdayaverage());
-							val.add(item.getTotalengagement());
+							val.add(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(item.getUsuarios())));
+							val.add(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(item.getMenciones())));
+							val.add(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(item.getImpresiones())));
+							val.add(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(item.getAlcance())));
 							values.add(val);
 							String dataPost = hoja.trim() + "!" + utilities.numToLetter(numPost) + AllItems.toString();
 					        ValueRange bodyPost = new ValueRange()
@@ -555,6 +565,62 @@ public class GoogleImpl implements GoogleService {
 					        AllItems++;
 					        Thread.sleep(800);
 							System.out.println("");
+							
+							
+							//####INSERCIÓN DEL OBJETO ALCANCE#####
+							if (item.getDataAlcance().size()>0) {
+								String Headers_R = "";
+								if (isNew) 
+									Headers_R = hoja.trim() + "!" + "G1";
+								else {
+									AllItems--;
+									Headers_R = hoja.trim() + "!" + "G" + AllItems.toString();
+								}
+								System.out.println("");
+								String[] headersAlc = FILE_COLUMNS_MELT_ALCANCE.split(",");
+				        		
+								List<List<Object>> valuesHeader = new ArrayList<List<Object>>();
+								List<Object> valHead = new ArrayList<Object>();
+								for (String itemHeA : headersAlc) {
+									valHead.add(itemHeA);
+								}
+								valuesHeader.add(valHead);
+								addHeaders = addHeadersSheet(valuesHeader, Headers_R, request.getSpreadsheet_id());
+								
+						        restGet = getDataSheetByFilter("COLUMNS", request.getSpreadsheet_id(), hoja.trim());
+						        restGetRaw = getDataSheetByFilter("RAW", request.getSpreadsheet_id(), hoja.trim());
+
+						        if (!isNew)
+						        	AllItems++;
+						        
+						        for (Object itemAlc : item.getDataAlcance()) {
+						        	HashMap<String,String> hashitemAlc = new HashMap<>();
+						        	hashitemAlc = (HashMap<String,String>) itemAlc;
+									List<List<Object>> valuesAlc = new ArrayList<List<Object>>();
+									List<Object> valAlc = new ArrayList<Object>();
+						        	for ( Entry<String, String> itAlcEn : hashitemAlc.entrySet()) {
+						        		String s = itAlcEn.getValue().toString();
+						        		if (itAlcEn.getKey().equals("Medicion")) 
+						        			valAlc.add(s);
+						        		else
+						        			valAlc.add(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(s)));
+										
+									}
+									valuesAlc.add(valAlc);
+									System.out.println();
+									String dataPostAlc = hoja.trim() + "!F" + AllItems.toString();
+							        ValueRange bodyPostAlc = new ValueRange()
+							                .setValues(valuesAlc);
+							        AppendValuesResponse resAlc = service.spreadsheets().values().append(request.getSpreadsheet_id(), dataPostAlc, bodyPostAlc)
+							                .setValueInputOption(valueInputOption)
+							                .execute();
+							        AllItems++;
+							        Thread.sleep(800);
+						        	System.out.println(hashitemAlc);
+						        }
+						        
+							}
+			        		//####INSERCIÓN DEL OBJETO ALCANCE#####
 						}
 			        	
 						//Validamos si el objeto del archivo viene lleno e insertamos sus registros
@@ -580,7 +646,7 @@ public class GoogleImpl implements GoogleService {
 												String itm1 = itemValueArr[0].toString();
 												String itm2 = itemValueArr[1].toString();
 												val.add(itm1);
-												val.add(itm2);
+												val.add(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(itm2)));
 												values.add(val);
 												String dataPost = hoja.trim() + "!" + utilities.numToLetter(numPost) + AllItems.toString();
 										        ValueRange bodyPost = new ValueRange()

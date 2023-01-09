@@ -8,10 +8,12 @@ import java.util.TreeMap;
 
 public class ObjMelt {
 	private String search;
-	private String totalmentions;
-	private String mentionsdayaverage;
-	private String totalengagement;
+	private String usuarios;
+	private String menciones;
+	private String impresiones;
+	private String alcance;
 	private HashMap<String, List<String>> valuesFile;
+	private ArrayList<Object> dataAlcance;
 	
 	public String getSearch() {
 		return search;
@@ -19,29 +21,43 @@ public class ObjMelt {
 	public void setSearch(String search) {
 		this.search = search;
 	}
-	public String getTotalmentions() {
-		return totalmentions;
+
+	public String getUsuarios() {
+		return usuarios;
 	}
-	public void setTotalmentions(String totalmentions) {
-		this.totalmentions = totalmentions;
+	public void setUsuarios(String usuarios) {
+		this.usuarios = usuarios;
 	}
-	public String getMentionsdayaverage() {
-		return mentionsdayaverage;
+	
+	public String getMenciones() {
+		return menciones;
 	}
-	public void setMentionsdayaverage(String mentionsdayaverage) {
-		this.mentionsdayaverage = mentionsdayaverage;
+	public void setMenciones(String menciones) {
+		this.menciones = menciones;
 	}
-	public String getTotalengagement() {
-		return totalengagement;
+	public String getImpresiones() {
+		return impresiones;
 	}
-	public void setTotalengagement(String totalengagement) {
-		this.totalengagement = totalengagement;
+	public void setImpresiones(String impresiones) {
+		this.impresiones = impresiones;
+	}
+	public String getAlcance() {
+		return alcance;
+	}
+	public void setAlcance(String alcance) {
+		this.alcance = alcance;
 	}
 	public HashMap<String, List<String>> getValuesFile() {
 		return valuesFile;
 	}
 	public void setValuesFile(HashMap<String, List<String>> valuesFile) {
 		this.valuesFile = valuesFile;
+	}
+	public ArrayList<Object> getDataAlcance() {
+		return dataAlcance;
+	}
+	public void setDataAlcance(ArrayList<Object> dataAlcance) {
+		this.dataAlcance = dataAlcance;
 	}
 	
 	
