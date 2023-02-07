@@ -15,4 +15,7 @@ public interface GoogleService {
 	UpdateSheetResponse updateDataSheet (UpdateSheetRequest request);
 	UpdateSheetMeltResponse updateDataSheetMelt (UpdateSheetMeltRequest request);
 	GetListSheetsResponse getElementsListSpreadsheet(SheetRequest request);
+	MeditionFSResponse meditionFileSlides (MeditionFSRequest request);
+	
+	void test(SheetRequest request);
 }

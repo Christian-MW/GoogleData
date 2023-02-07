@@ -14,6 +14,7 @@ public class ObjMelt {
 	private String alcance;
 	private HashMap<String, List<String>> valuesFile;
 	private ArrayList<Object> dataAlcance;
+	private ArrayList<Object> authors;
 	
 	public String getSearch() {
 		return search;
@@ -58,6 +59,12 @@ public class ObjMelt {
 	}
 	public void setDataAlcance(ArrayList<Object> dataAlcance) {
 		this.dataAlcance = dataAlcance;
+	}
+	public ArrayList<Object> getAuthors() {
+		return authors;
+	}
+	public void setAuthors(ArrayList<Object> authors) {
+		this.authors = authors;
 	}
 	
 	

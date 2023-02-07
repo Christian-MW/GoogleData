@@ -62,6 +62,7 @@ import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.util.store.MemoryDataStoreFactory;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.common.base.CharMatcher;
+import com.google.gson.Gson;
 import com.google.api.client.http.HttpRequestInitializer;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -99,10 +100,18 @@ public class GoogleImpl implements GoogleService {
     private String credentialsFilePath;
     @Value("${values.file.melt}")
     private String headersFileMelt;
+    @Value("${file.columns.mentionf}")
+    private String COLUMNS_FILE_MENTIONS;
+    @Value("${file.columns.mentionf.sh}")
+    private String COLUMNS_FILE_MENTIONS_SH;
+    @Value("${file.columns.mentionf.au}")
+    private String COLUMNS_FILE_MENTIONS_AU;
     @Autowired
     private static GoogleAuthorizationConfig googleAuthorizationConfig;
     @Autowired
     Utilities utilities;
+    @Autowired
+    GoogleSlideImpl googleSlideImpl;
 	
     
 	public SheetResponse getDataSheet(SheetRequest request) {
@@ -699,8 +708,336 @@ public class GoogleImpl implements GoogleService {
 			return result;
 		}
 	}
+
+	public MeditionFSResponse meditionFileSlides(MeditionFSRequest request) {
+		MeditionFSResponse result = new MeditionFSResponse();
+		try {
+			String charsToRetain = "0123456789";
+			Sheets service = getServiceSheet();
+			
+			//Obtenemos las hojas existentes del Spreadsheet enviado
+			SheetRequest reqListSheets = new SheetRequest();
+			reqListSheets.setSpreadsheet_id(request.getSpreadsheet_id());
+			GetListSheetsResponse resListSheets = getElementsListSpreadsheet(reqListSheets);	
+			String[] headersValMelt = headersFileMelt.split(",");
+			String[] sheetsFile = COLUMNS_FILE_MENTIONS.toString().split(",");
+			Boolean isNew = false;
+			String Search = "";
+			List<Object> authors = new ArrayList<Object>();
+			for (ObjMelt itemOBJ :request.getObjectResult()) {
+				Integer RangeCount = 0;
+				Boolean existsheet = false;
+				Search = itemOBJ.getSearch();
+				for (String sheet : sheetsFile) {
+					if (sheet.equals("Automatizacion")) {
+						sheet = "Automatización";
+					}
+					//createSheet(request.getSpreadsheet_id(), sheet);
+					//Código para hacer todo el desmadre
+					RangeCount++;
+					SheetResponse restGet = new SheetResponse();
+					SheetResponse restGetRaw = new SheetResponse();
+			        //##########GetData Sheet
+			        restGet = getDataSheetByFilter("COLUMNS", request.getSpreadsheet_id(), sheet.trim());
+			        restGetRaw = getDataSheetByFilter("RAW", request.getSpreadsheet_id(), sheet.trim());
+					
+			        String valueInputOption = "RAW";
+			        Boolean addHeaders = false;
+			        Integer numPost = 1;
+			        //Validamos si la hoja del sheet contiene datos
+			        //Si esta vacía habrá que agregar los encabezados					
+			        if (restGet.objectResult == null) {
+			        	isNew = true;
+			        	String[] headers = null;
+			        	//Agregar encabezados
+			        	if (!addHeaders) {
+			        		if (RangeCount==1)
+			        			headers = FILE_COLUMNS_MELT.split(",");
+			        		if (RangeCount==2)
+			        			headers = FILE_COLUMNS_MELT2.split(",");
+			        		if (RangeCount==3)
+			        			headers = COLUMNS_FILE_MENTIONS_SH.split(",");
+			        		if (RangeCount==4)
+			        			headers = COLUMNS_FILE_MENTIONS_AU.split(",");
+			        		
+			        		String Headers_R = sheet.trim() + "!" + "A1";
+							List<List<Object>> valuesHeader = new ArrayList<List<Object>>();
+							List<Object> valHead = new ArrayList<Object>();
+							for (String item : headers) {
+								valHead.add(item);
+							}
+							valuesHeader.add(valHead);
+							addHeaders = addHeadersSheet(valuesHeader, Headers_R, request.getSpreadsheet_id());
+						}
+				        restGet = getDataSheetByFilter("COLUMNS", request.getSpreadsheet_id(), sheet.trim());
+				        restGetRaw = getDataSheetByFilter("RAW", request.getSpreadsheet_id(), sheet.trim());
+				        addHeaders= true;
+			        }
+			        Integer AllItems = 0;
+			        if (isNew) 
+			        	AllItems = restGetRaw.objectResult.size();
+			        else
+			        	AllItems = restGetRaw.objectResult.size() + 2;
+			        
+			        List<ObjMelt> elementFile = new ArrayList<ObjMelt>();
+			        for (ObjMelt item : request.getObjectResult()) {
+						if (item.getSearch().equals(Search)) {
+							elementFile.add(item);
+							break;
+						}
+					}
+			        //Recorrer el objeto para insertar los datos
+			        //for (ObjMelt item : request.getObjectResult()) { //Recorrer todos los elementos en vez de uno solo
+			        for (ObjMelt item : elementFile) {
+			        	//##########__INSERCIÓN DE LA HOJA RESULTADOS__#########
+			        	if (RangeCount == 1) {
+							List<List<Object>> values = new ArrayList<List<Object>>();
+							List<Object> val = new ArrayList<Object>();
+							val.add(item.getSearch());
+							val.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(item.getUsuarios())));
+							val.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(item.getMenciones())));
+							val.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(item.getImpresiones())));
+							val.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(item.getAlcance())));
+							values.add(val);
+							
+							//##SE AGREGÓ PARA REEMPLAZAR LOS DATOS EXISTENTES Y QUE NO SE AGREGUEN NUEVOS
+							//String dataPost = sheet.trim() + "!" + utilities.numToLetter(numPost) + AllItems.toString();
+							String dataPost = sheet.trim() + "!" + utilities.numToLetter(numPost) + 2;
+							//##
+							
+					        ValueRange bodyPost = new ValueRange()
+					                .setValues(values);
+    				    Sheets.Spreadsheets.Values.Update res =
+    				    		service.spreadsheets().values().update(request.getSpreadsheet_id(), dataPost, bodyPost);
+    				        res.setValueInputOption(valueInputOption).execute();
+					        AllItems++;
+					        Thread.sleep(800);
+							System.out.println("");
+							
+							//####INSERCIÓN DEL OBJETO ALCANCE#####
+							if (item.getDataAlcance().size()>0) {
+								String Headers_R = "";
+								if (isNew) 
+									Headers_R = sheet.trim() + "!" + "G1";
+								else {
+									AllItems--;
+									//Headers_R = sheet.trim() + "!" + "G" + AllItems.toString();
+									Headers_R = sheet.trim() + "!" + "G1";
+								}
+								System.out.println("");
+								String[] headersAlc = FILE_COLUMNS_MELT_ALCANCE.split(",");
+				        		
+								List<List<Object>> valuesHeader = new ArrayList<List<Object>>();
+								List<Object> valHead = new ArrayList<Object>();
+								for (String itemHeA : headersAlc) {
+									valHead.add(itemHeA);
+								}
+								valuesHeader.add(valHead);
+								
+								//##SE AGREGÓ PARA REEMPLAZAR LOS DATOS EXISTENTES Y QUE NO SE AGREGUEN NUEVOS
+								if (isNew)
+									addHeaders = addHeadersSheet(valuesHeader, Headers_R, request.getSpreadsheet_id());
+								//##
+								
+						        restGet = getDataSheetByFilter("COLUMNS", request.getSpreadsheet_id(), sheet.trim());
+						        restGetRaw = getDataSheetByFilter("RAW", request.getSpreadsheet_id(), sheet.trim());
+
+						        if (!isNew)
+						        	AllItems++;
+						        
+						        Integer itmAlc = 1;
+						        for (Object itemAlc : item.getDataAlcance()) {
+						        	itmAlc++;
+						        	HashMap<String,String> hashitemAlc = new HashMap<>();
+						        	hashitemAlc = (HashMap<String,String>) itemAlc;
+									List<List<Object>> valuesAlc = new ArrayList<List<Object>>();
+									List<Object> valAlc = new ArrayList<Object>();
+						        	for ( Entry<String, String> itAlcEn : hashitemAlc.entrySet()) {
+						        		String s = itAlcEn.getValue().toString();
+						        		if (itAlcEn.getKey().equals("Medicion")) 
+						        			valAlc.add(s);
+						        		else
+						        			valAlc.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(s)));
+										
+									}
+									valuesAlc.add(valAlc);
+									System.out.println();
+									
+									//##SE AGREGÓ PARA REEMPLAZAR LOS DATOS EXISTENTES Y QUE NO SE AGREGUEN NUEVOS
+									//String dataPostAlc = sheet.trim() + "!F" + AllItems.toString();
+									String dataPostAlc = sheet.trim() + "!F" + itmAlc;
+									//##
+									
+							        ValueRange bodyPostAlc = new ValueRange()
+							                .setValues(valuesAlc);
+		    				    Sheets.Spreadsheets.Values.Update resAlc =
+		    				    		service.spreadsheets().values().update(request.getSpreadsheet_id(), dataPostAlc, bodyPostAlc);
+		    				        resAlc.setValueInputOption(valueInputOption).execute();
+							        AllItems++;
+							        Thread.sleep(800);
+						        	System.out.println(hashitemAlc);
+						        }
+						        
+							}
+			        		//####INSERCIÓN DEL OBJETO ALCANCE#####
+			        	}
+			        	
+			        	//##########__INSERCIÓN DE LA HOJA ACTIVIDAD__#########
+						//Validamos si el objeto del archivo viene lleno e insertamos sus registros
+			        	if (RangeCount == 2) {
+							//if (item.getValuesFile().size()>0) {
+			        		if (headersValMelt.length>0) {
+								//Obtenemos los objetos de los archivos para almacenar
+			        			//for (String key : item.getValuesFile().keySet()) {
+								for (String key : headersValMelt) {
+									Integer itmAct = 1;
+									//Valores del archivo
+									List<String> value = item.getValuesFile().get(key);
+									if (value != null) {
+										for (String element : value) {
+											List<List<Object>> values = new ArrayList<List<Object>>();
+											List<Object> val = new ArrayList<Object>();
+											val.add(item.getSearch());
+											val.add(key);
+											if (element != null) {
+												itmAct ++;
+												//Elementos por renglón
+												String[] itemValueArr = element.toString().split(",");
+												//val.add(itemValueArr[0].toString().substring(1, itemValueArr[0].toString().length()));
+												String itm1 = itemValueArr[0].toString();
+												String itm2 = itemValueArr[1].toString();
+												val.add(itm1);
+												val.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(itm2)));
+												values.add(val);
+												//String dataPost = sheet.trim() + "!" + utilities.numToLetter(numPost) + AllItems.toString();
+												String dataPost = sheet.trim() + "!" + utilities.numToLetter(numPost) + itmAct;
+										        ValueRange bodyPost = new ValueRange()
+										                .setValues(values);
+					    				    Sheets.Spreadsheets.Values.Update res =
+					    				    		service.spreadsheets().values().update(request.getSpreadsheet_id(), dataPost, bodyPost);
+					    				        res.setValueInputOption(valueInputOption).execute();
+										        AllItems++;
+										        Thread.sleep(800);
+												System.out.println(key.equals(element.toString()));
+											}
+										}
+									}
+								}
+								//System.out.println("");
+							}
+							else {
+								List<List<Object>> values = new ArrayList<List<Object>>();
+								List<Object> val = new ArrayList<Object>();
+								val.add(item.getSearch());
+								val.add("");
+								val.add("");
+								val.add("");
+								values.add(val);
+								AllItems++;
+								String dataPost = sheet.trim() + "!" + utilities.numToLetter(numPost) + AllItems.toString();
+						        ValueRange bodyPost = new ValueRange()
+						                .setValues(values);
+						        AppendValuesResponse res = service.spreadsheets().values().append(request.getSpreadsheet_id(), dataPost, bodyPost)
+						                .setValueInputOption(valueInputOption)
+						                .execute();
+						        Thread.sleep(800);
+						        System.out.println("");
+							}
+			        	}
+			        	//##########__INSERCIÓN DE LA HOJA STAKEHOLDERS__#########
+			        	if (RangeCount == 3) {
+			        		if (item.getAuthors().size()>0) {
+			        			authors = item.getAuthors();
+			        			Integer itmSH = 1;
+								for (Object itemAut : item.getAuthors()) {
+									itmSH++;
+						        	HashMap<String,String> hashitemAut = new HashMap<>();
+						        	hashitemAut = (HashMap<String,String>) itemAut;
+									List<List<Object>> valuesAut = new ArrayList<List<Object>>();
+									List<Object> valAut = new ArrayList<Object>();
+						        	for ( Entry<String, String> itAlcEn : hashitemAut.entrySet()) {
+						        		String s = itAlcEn.getValue().toString();
+						        		valAut.add(s);
+									}
+						        	valuesAut.add(valAut);
+									System.out.println();
+									//String dataPostAlc = sheet.trim() + "!A" + AllItems.toString();
+									String dataPostAlc = sheet.trim() + "!A" + itmSH;
+							        ValueRange bodyPostSH = new ValueRange()
+							                .setValues(valuesAut);
+		    				    Sheets.Spreadsheets.Values.Update resSH =
+		    				    		service.spreadsheets().values().update(request.getSpreadsheet_id(), dataPostAlc, bodyPostSH);
+		    				        resSH.setValueInputOption(valueInputOption).execute();
+							        AllItems++;
+							        Thread.sleep(800);
+						        	System.out.println(hashitemAut);
+									
+								}
+							}
+			        	}
+			        	
+			        	//##########__INSERCIÓN DE LA HOJA AUTOMATIZACIÓN__#########
+			        	if (RangeCount == 4) {
+			        		System.out.println("");
+			        	}
+			        }
+				}
+			}
+			
+			//########################################################
+			//######Llamar al servicio de actualización de Slides######
+			//########################################################
+			Thread.sleep(2000);
+			SlideRequest objUDS = new SlideRequest();
+			objUDS.setSlide_id(request.getSlide_id());
+			objUDS.setSpreadsheet_id(request.getSpreadsheet_id());
+			SlideResponse resUDS = googleSlideImpl.updateDataSlide(objUDS);
+			if (resUDS.getCode() == 500) {
+				result.setCode(500);
+				result.setMessage("ERROR: " + resUDS.getMessage());
+				return result;
+			}
+			
+			//########################################################
+			//####Llamar al servicio de agregar imagenes en Slides####
+			//########################################################
+			String slideID = "";
+			SheetResponse restGetRawD = getDataSheetByFilter("RAW", request.getSpreadsheet_id(), "Automatización");
+			for (List<Object> itemAut : restGetRawD.getObjectResult()) {
+				try {
+					if (itemAut.get(1).toString().toLowerCase().equals("{{slide.images.id}}")) {
+						slideID = itemAut.get(2).toString();
+						break;
+					}
+				} catch (Exception e) {
+					slideID = "0";
+					break;
+				}
+			}
+			
+			Thread.sleep(1000);
+			AddImgSlideRequest objAddIm = new AddImgSlideRequest();
+			objAddIm.setPresentation_id(request.getSlide_id());
+			objAddIm.setSlide_id(slideID);
+			objAddIm.setAuthors(authors);
+			SlideResponse resAddIm = googleSlideImpl.addImagesSlide(objAddIm);
+			if (resAddIm.getCode() == 500) {
+				result.setCode(500);
+				result.setMessage("ERROR: " + resAddIm.getMessage());
+				return result;
+			}
+			
+			result.setCode(200);
+			result.setMessage("OK");
+			return result;
+		} catch (Exception e) {
+			result.setCode(500);
+			result.setMessage("ERROR: " + e.getMessage());
+			return result;
+		}
+	}
 	
-	public void createSheet (String spreadsheet_id, String nameSheet) {
+ 	public void createSheet (String spreadsheet_id, String nameSheet) {
 		try {
 			Sheets service = getServiceSheet();
 			
@@ -755,6 +1092,230 @@ public class GoogleImpl implements GoogleService {
 			result.setCode(500);
 			result.setMessage("Error al obtener los datos " + e.getMessage());
 			return result;
+		}
+	}
+
+	
+	public void test(SheetRequest request) {
+		List<JSONMalta> result = new ArrayList<JSONMalta>();
+		Sheets service = getServiceSheet();
+		String sheetID="1Iw7dz6Q-mC0vlTbrNY39_KST5gd_CF3_1MK_zOHZivY";
+		String sheetName="productos";
+		String charsToRetain = "0123456789";
+		Integer numProduct = 0;
+		
+		try {
+	        //##########GetData Sheet
+			SheetResponse restGet = getDataSheetByFilter("COLUMNS", sheetID, sheetName);
+			SheetResponse restGetRaw = getDataSheetByFilter("RAW", sheetID, sheetName);
+			for ( List<Object> product : restGetRaw.objectResult) {
+				System.out.println(product);
+				numProduct++;
+				JSONMalta itemProd = new JSONMalta();
+				JSONMaltaID idProd = new JSONMaltaID();
+				List<Integer> wg = new ArrayList<Integer>();
+				List<String> PDA = new ArrayList<String>();
+				List<String> PT = new ArrayList<String>();
+				List<String> imageP = new ArrayList<String>();
+				List<String> images = new ArrayList<String>();
+				List<String> featured = new ArrayList<String>();
+				JSONMaltaDate stDate =  new JSONMaltaDate();
+				JSONMaltaDate enDate = new JSONMaltaDate();
+				JSONMaltaMeta metaD = new JSONMaltaMeta();
+				
+				
+				if (!product.get(0).toString().startsWith("item_number")) {
+					
+					//###-------_id-------###
+					if (product.get(2).toString().startsWith("n/d")) 
+						idProd.set$oid("");
+					else
+						idProd.set$oid(product.get(2).toString());
+					itemProd.set_id(idProd);
+					
+					//###-------weight-------###
+					if (!product.get(3).toString().isEmpty() && !product.get(3).toString().startsWith("n/d")) 
+						wg.add(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(product.get(3).toString())));
+					if (!product.get(4).toString().isEmpty() && !product.get(4).toString().startsWith("n/d")) 
+						wg.add(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(product.get(4).toString())));
+					itemProd.setWeight(wg);
+					
+					//###-------possible_drugs_added-------###
+					if (!product.get(7).toString().isEmpty() && !product.get(7).toString().startsWith("n/d"))
+						PDA.add(product.get(7).toString());
+					if (!product.get(8).toString().isEmpty() && !product.get(8).toString().startsWith("n/d"))
+						PDA.add(product.get(8).toString());
+					if (!product.get(9).toString().isEmpty() && !product.get(9).toString().startsWith("n/d"))
+						PDA.add(product.get(9).toString());
+					if (!product.get(10).toString().isEmpty() && !product.get(10).toString().startsWith("n/d"))
+						PDA.add(product.get(10).toString());
+					if (!product.get(11).toString().isEmpty() && !product.get(11).toString().startsWith("n/d"))
+						PDA.add(product.get(11).toString());
+					if (!product.get(12).toString().isEmpty() && !product.get(12).toString().startsWith("n/d"))
+						PDA.add(product.get(12).toString());
+					if (!product.get(13).toString().isEmpty() && !product.get(13).toString().startsWith("n/d"))
+						PDA.add(product.get(13).toString());
+					if (!product.get(14).toString().isEmpty() && !product.get(14).toString().startsWith("n/d"))
+						PDA.add(product.get(14).toString());
+					if (!product.get(15).toString().isEmpty() && !product.get(15).toString().startsWith("n/d"))
+						PDA.add(product.get(15).toString());
+					if (!product.get(16).toString().isEmpty() && !product.get(16).toString().startsWith("n/d"))
+						PDA.add(product.get(16).toString());
+					if (!product.get(17).toString().isEmpty() && !product.get(17).toString().startsWith("n/d"))
+						PDA.add(product.get(17).toString());
+					if (!product.get(18).toString().isEmpty() && !product.get(18).toString().startsWith("n/d"))
+						PDA.add(product.get(18).toString());
+					itemProd.setPossible_drugs_added(PDA);
+					
+					
+					//###-------particle_types-------###
+					if (!product.get(6).toString().isEmpty() && !product.get(6).toString().startsWith("n/d"))
+						PT.add(product.get(6).toString());
+					if (!product.get(19).toString().isEmpty() && !product.get(19).toString().startsWith("n/d"))
+						PT.add(product.get(19).toString());
+					if (!product.get(20).toString().isEmpty() && !product.get(20).toString().startsWith("n/d"))
+						PT.add(product.get(20).toString());
+					itemProd.setParticle_types(PT);
+					
+					
+					//###-------images_particle-------###
+					if (!product.get(21).toString().isEmpty() && !product.get(21).toString().startsWith("n/d"))
+						imageP.add(product.get(21).toString());
+					if (!product.get(22).toString().isEmpty() && !product.get(22).toString().startsWith("n/d"))
+						imageP.add(product.get(22).toString());
+					itemProd.setImages_particle(imageP);
+					
+					
+					//###-------images-------###
+					if (!product.get(23).toString().isEmpty() && !product.get(23).toString().startsWith("n/d"))
+						images.add(product.get(23).toString());
+					if (!product.get(24).toString().isEmpty() && !product.get(24).toString().startsWith("n/d"))
+						images.add(product.get(24).toString());
+					itemProd.setImages(images);
+					
+					//###-------featured_in-------###
+					if (!product.get(25).toString().isEmpty() && !product.get(25).toString().startsWith("n/d"))
+						featured.add(product.get(25).toString());
+					itemProd.setFeatured_in(featured);
+					
+					//###-------item_number-------###
+					if (!product.get(0).toString().isEmpty() && !product.get(0).toString().startsWith("n/d"))
+						itemProd.setItem_number(product.get(0).toString());
+					
+					//###-------item_name-------###
+					if (!product.get(1).toString().isEmpty() && !product.get(1).toString().startsWith("n/d"))
+						itemProd.setItem_name(product.get(1).toString());
+					
+					//###-------item_description-------###
+					if (!product.get(26).toString().isEmpty() && !product.get(26).toString().startsWith("n/d"))
+						itemProd.setItem_description(product.get(26).toString());
+					
+					//###-------long_description-------###
+					if (!product.get(27).toString().isEmpty() && !product.get(27).toString().startsWith("n/d"))
+						itemProd.setLong_description(product.get(27).toString());
+					
+					//###-------item_shortname-------###
+					if (!product.get(28).toString().isEmpty() && !product.get(28).toString().startsWith("n/d"))
+						itemProd.setItem_shortname(product.get(28).toString());
+					
+					//###-------brand_code-------###
+					if (!product.get(29).toString().isEmpty() && !product.get(29).toString().startsWith("n/d"))
+						itemProd.setBrand_code(product.get(29).toString());
+					
+					//###-------division_code-------###
+					if (!product.get(30).toString().isEmpty() && !product.get(30).toString().startsWith("n/d"))
+						itemProd.setDivision_code(product.get(30).toString());
+					
+					//###-------subdivision-------###
+					if (!product.get(31).toString().isEmpty() && !product.get(31).toString().startsWith("n/d"))
+						itemProd.setSubdivision(product.get(31).toString());
+					
+					//###-------price_cathegory-------###
+					if (!product.get(32).toString().isEmpty() && !product.get(32).toString().startsWith("n/d"))
+						itemProd.setPrice_cathegory(product.get(32).toString());
+					
+					//###-------sub_brand-------###
+					if (!product.get(33).toString().isEmpty() && !product.get(33).toString().startsWith("n/d"))
+						itemProd.setSub_brand(product.get(33).toString());
+
+					//###-------cathegory_inventory-------###
+					if (!product.get(34).toString().isEmpty() && !product.get(34).toString().startsWith("n/d"))
+						itemProd.setCathegory_inventory(product.get(34).toString());
+					
+					//###-------stage-------###
+					if (!product.get(35).toString().isEmpty() && !product.get(35).toString().startsWith("n/d"))
+						itemProd.setStage(product.get(35).toString());
+					
+					//###-------item_status-------###
+					if (!product.get(36).toString().isEmpty() && !product.get(36).toString().startsWith("n/d"))
+						itemProd.setItem_status(product.get(36).toString());
+					
+					//###-------sales_product_type_code-------###
+					if (!product.get(37).toString().isEmpty() && !product.get(37).toString().startsWith("n/d"))
+						itemProd.setSales_product_type_code(product.get(37).toString());
+					
+					//###-------technology_code-------###
+					if (!product.get(38).toString().isEmpty() && !product.get(38).toString().startsWith("n/d"))
+						itemProd.setTechnology_code(product.get(38).toString());
+					
+					//###-------protein-------###
+					if (!product.get(39).toString().isEmpty() && !product.get(39).toString().startsWith("n/d"))
+						itemProd.setProtein(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(product.get(39).toString())));
+					
+					//###-------fat-------###
+					if (!product.get(40).toString().isEmpty() && !product.get(40).toString().startsWith("n/d"))
+						itemProd.setFat(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(product.get(40).toString())));
+					
+					//###-------humidity-------###
+					if (!product.get(42).toString().isEmpty() && !product.get(42).toString().startsWith("n/d"))
+						itemProd.setHumidity(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(product.get(42).toString())));
+					
+					//###-------benefits-------###
+					if (!product.get(45).toString().isEmpty() && !product.get(45).toString().startsWith("n/d"))
+						itemProd.setBenefits(product.get(45).toString());
+					
+					//###-------fiber-------###
+					if (!product.get(41).toString().isEmpty() && !product.get(41).toString().startsWith("n/d"))
+						itemProd.setFiber(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(product.get(41).toString())));
+					
+					//###-------ashes-------###
+					if (!product.get(43).toString().isEmpty() && !product.get(43).toString().startsWith("n/d"))
+						itemProd.setAshes(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(product.get(43).toString())));
+					
+					//###-------eln-------###
+					if (!product.get(46).toString().isEmpty() && !product.get(46).toString().startsWith("n/d"))
+						itemProd.setEln(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(product.get(46).toString())));
+					
+					//###-------particle-------###
+					if (!product.get(47).toString().isEmpty() && !product.get(47).toString().startsWith("n/d"))
+						itemProd.setParticle(product.get(47).toString());
+					
+					//###-------createdAt-------###
+					stDate.$date = "2020-10-13T22:40:07.917+0000";
+					itemProd.setCreatedAt(stDate);
+					
+					//###-------updatedAt-------###
+					enDate.$date = "2023-01-27T22:40:07.917+0000";
+					itemProd.setUpdatedAt(enDate);
+					
+					//###-------active-------###
+					if (!product.get(53).toString().isEmpty() && !product.get(53).toString().startsWith("n/d"))
+						itemProd.setActive(true);
+					
+					//###-------metadata-------###
+					if (!product.get(5).toString().isEmpty() && !product.get(5).toString().startsWith("n/d"))
+						metaD.setSader(product.get(5).toString());
+					itemProd.setMetadata(metaD);
+					
+					//##AGREGAR OBJETO AL ARREGLO
+					result.add(itemProd);
+				}
+			}
+			System.out.println(new Gson().toJson(result));
+			
+		} catch (Exception e) {
+			System.out.println("====> ERROR: ");
+			System.out.println(e.getMessage());
 		}
 	}
 }

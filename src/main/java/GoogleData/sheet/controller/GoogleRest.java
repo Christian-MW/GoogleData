@@ -54,26 +54,17 @@ public class GoogleRest {
 		return googleService.getElementsListSpreadsheet(request);
 	}
 	
-	@GetMapping(value="/get/test", produces = MediaType.APPLICATION_JSON_VALUE)
-    public List<String> getDataTest() {
-		
-		HashMap<String, List<String>> newItem = new HashMap<String, List<String>>();
-		List<String> it = new ArrayList<String>();
-		List<ObjMelt> ListitemAll = new ArrayList<ObjMelt>();
-		ObjMelt itemAll = new ObjMelt();
-		UpdateSheetMeltRequest req = new UpdateSheetMeltRequest();
-		it.add("2022-09-28 00:00:00,1836");
-		it.add("2022-09-28 00:00:00,1836");
-		newItem.put("Totales", it);
-		newItem.put("Tweets", it);
-		itemAll.setValuesFile(newItem);
-		itemAll.setSearch("Busqueda2");
-		
-		ListitemAll.add(itemAll);
-		req.setObjectResult(ListitemAll);
-		
-		List<String> res = new ArrayList<>();
-		return res;
+	@PostMapping(value="/sheets/MeditionFileSlides", 
+	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	public MeditionFSResponse MeditionFileSlides(@RequestBody MeditionFSRequest request) {
+		return googleService.meditionFileSlides(request);
+	}	
+	
+	
+	@PostMapping(value="/sheets/test", 
+	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public void test(@RequestBody SheetRequest request) {
+		googleService.test(request);
    }
 	
 }

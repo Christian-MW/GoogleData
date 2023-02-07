@@ -26,4 +26,16 @@ public class GoogleSlideRest {
 		return googleSlideService.updateDataSlide(request);
 	}
 	
+	
+	@PostMapping(value="/Slides/AddImages", 
+	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	public SlideResponse updateImagesSlide(@RequestBody AddImgSlideRequest request) {
+		return googleSlideService.addImagesSlide(request);
+	}
+	
+	@PostMapping(value="/Slides/test", 
+	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	public void test(@RequestBody SlideRequest request) {
+		googleSlideService.test(request);
+	}
 }
