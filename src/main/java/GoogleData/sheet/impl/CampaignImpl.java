@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
 
@@ -49,9 +50,7 @@ import com.google.gson.Gson;
 import GoogleData.sheet.config.GoogleAuthorizationConfig;
 import GoogleData.sheet.dto.request.*;
 import GoogleData.sheet.dto.response.*;
-import GoogleData.sheet.model.CampaignRulesModel;
-import GoogleData.sheet.model.CampaignStreamModel;
-import GoogleData.sheet.model.ObjColModel;
+import GoogleData.sheet.model.*;
 import GoogleData.sheet.service.CampaignService;
 import GoogleData.sheet.utils.Utilities;
 
@@ -71,11 +70,15 @@ public class CampaignImpl implements CampaignService {
     private String CONF_HOURS_CAMPAIGN;
     @Value("${min.followers.campaign}")
     private String MIN_FOLLOWERS_CAMPAIGN;
+    @Value("${email.users.campaign}")
+    private String EMAIL_CAMPAIGN;
     
     @Value("${file.char.update.user}")
     private String CHAR_UPDATE_USER;
     @Value("${file.char.add.user}")
     private String CHAR_ADD_USER;
+    @Value("${file.range.average}")
+    private String RANGE_AVERAGE;
     @Autowired
     private static GoogleAuthorizationConfig googleAuthorizationConfig;
     @Autowired
@@ -88,6 +91,7 @@ public class CampaignImpl implements CampaignService {
     	log.info("===> request: " + new Gson().toJson(request));
 	
     	try {
+
     		Sheets service = utilities.getServiceSheet();
     		Boolean existsheet = false;
 			//Obtenemos las hojas existentes del Spreadsheet enviado
@@ -167,7 +171,7 @@ public class CampaignImpl implements CampaignService {
 	        
 	 
 	    	//####Guardar o actualizar Campaña en JSON
-	    	GetUsersCampaignResponse usersResponse = getInfoUsers(request.getSpreadsheet_id());
+	    	GetUsersCampaignResponse usersResponse = getInfoUsers(request.getSpreadsheet_id(),request.getSearch());
 	    	if (usersResponse.getCode() == 200) 
 	    		request.setUsers(usersResponse.getUsers());
 	    	
@@ -240,6 +244,8 @@ public class CampaignImpl implements CampaignService {
 		        log.info("##Rango a actualizar el usuario: " + range);
 		        System.out.println("##Rango a actualizar el usuario: " + range);
 				val.add(valChar);
+				val.add(request.getFollowers());
+				val.add(request.getLink());
 				values.add(val);
 				
 				
@@ -331,7 +337,7 @@ public class CampaignImpl implements CampaignService {
 	        
 	        	System.out.println("");
 		        range = RANGE_CAMPAIGN.toLowerCase().trim() + "!" + utilities.numToLetter(sortedUsers.get(0).getPosition()+1);
-		        range += sortedUsers.get(0).getValue() +1 + ":" + utilities.numToLetter(sortedUsers.get(0).getPosition()+2);
+		        range += sortedUsers.get(0).getValue() +1 + ":" + utilities.numToLetter(sortedUsers.get(0).getPosition()+4);
 		        range +=  sortedUsers.get(0).getValue() +1;
 		        
 		        log.info("##Rango a CREAR el usuario: " + range);
@@ -339,6 +345,8 @@ public class CampaignImpl implements CampaignService {
 		        
 				val.add(request.getAccount());
 				val.add(valChar);
+				val.add(request.getFollowers());
+				val.add(request.getLink());
 				values.add(val);
 				
 		        ValueRange bodyPost = new ValueRange()
@@ -431,13 +439,14 @@ public class CampaignImpl implements CampaignService {
     	
     }
     
-    public GetUsersCampaignResponse getInfoUsers(String sheetID) {
+    public GetUsersCampaignResponse getInfoUsers(String sheetID, String nameCampaign) {
     	log.info("##############_Get_Info_Users_#############");
     	GetUsersCampaignResponse result = new GetUsersCampaignResponse();
     	try {
     		List<Integer> columPos = new ArrayList<Integer>();
     		String[] headArr;
     		List<String> usersFile = new ArrayList<String>();
+    		List<Map<String, String>> usersObj =  new ArrayList<Map<String, String>>();
     		Sheets service = utilities.getServiceSheet();
 			SheetRequest reqListSheets = new SheetRequest();
 			reqListSheets.setSpreadsheet_id(sheetID);
@@ -470,11 +479,27 @@ public class CampaignImpl implements CampaignService {
 					//Obteniendo los "usuarios" de las filas obtenidas
 					for (Integer colItem: columPos) {
 						List<Object> valCol = restGet.getObjectResult().get(colItem);
+						List<Object> statusUsers = restGet.getObjectResult().get(colItem+1);
+						Integer itmUs = -1;
 						for (Object itValCol: valCol) {
-							if (!itValCol.toString().toLowerCase().equals(RANGE_CAMPAIGN.toLowerCase())) 
+							itmUs++;
+							if (!itValCol.toString().toLowerCase().equals(RANGE_CAMPAIGN.toLowerCase())) {
 								usersFile.add(itValCol.toString());
+								HashMap<String, String> itemUser = new HashMap<>();
+								try {
+									itemUser.put(itValCol.toString(), statusUsers.get(itmUs).toString());
+									usersObj.add(itemUser);
+								} catch (Exception e) {
+									itemUser.put(itValCol.toString(), "");
+									usersObj.add(itemUser);
+								}
+								
+								
+							}
 						}
 					}
+					saveUsersBD(usersObj, nameCampaign);
+					utilities.sendUsersProcessAverage(usersFile, sheetID);
 					
 					result.setMessage("Se obtuvieron correctamente los usuarios");
 					result.setUsers(usersFile);
@@ -493,6 +518,32 @@ public class CampaignImpl implements CampaignService {
 		}
     }
 
+    public void saveUsersBD(List<Map<String, String>> ListUsers, String nameCampaign) {
+    	log.info("#########################################");
+    	log.info("##########___SAVE_USERS_BD___############");
+    	log.info("#########################################");
+    	List<UsersDB> ObjUsersDB = new ArrayList<UsersDB>();
+    	String str = "HENUECK";
+    	str = str.substring(1);
+
+    	for (Map<String, String> itemUser : ListUsers) {
+    		UsersDB userDB = new UsersDB();
+    		for ( Entry<String, String> item : itemUser.entrySet()) {
+        		userDB.setEmail(EMAIL_CAMPAIGN);
+        		userDB.setFollowers(0);
+        		userDB.setHashtag(nameCampaign);
+        		userDB.setLink("https://twitter.com/" + item.getKey().toString().substring(1));
+        		userDB.setScreanName(item.getKey());
+        		userDB.setSocialNetwork("twitter");
+        		userDB.setStatus(item.getValue());
+        		ObjUsersDB.add(userDB);
+    		}
+		}
+    	utilities.saveUsersDB(ObjUsersDB);
+    	
+    	
+    }
+    
     public CampaignStreamModel setCamResToCampStream(AddCampaignRequest req) {
     	log.info("==> Convert CampaignRequest--TO--CampaignStreamModel");
     	CampaignStreamModel result = new CampaignStreamModel();
@@ -534,4 +585,163 @@ public class CampaignImpl implements CampaignService {
 			return result;
 		}
     }
+    
+    
+    public AverageCampaignResponse updateAverageCampaign(AverageCampaignRequest request) {
+    	log.info("##############__updateAverageCampaign__#############");
+    	AverageCampaignResponse result = new AverageCampaignResponse();
+    	try {
+    		Sheets service = utilities.getServiceSheet();
+	        //##########GetData Sheet
+			SheetResponse restGet = new SheetResponse();
+			SheetResponse restGetRaw = new SheetResponse();
+	        restGet = googleImpl.getDataSheetByFilter("COLUMNS", request.getSpreadsheetId(), RANGE_CAMPAIGN.toLowerCase().trim());
+	        restGetRaw = googleImpl.getDataSheetByFilter("RAW", request.getSpreadsheetId(), RANGE_CAMPAIGN.toLowerCase().trim());
+	        
+	        String valueInputOption = "RAW";
+	        String valueInputOptionC = "USER_ENTERED";
+	        Integer column = 0, row = 0, rowMaxReach = 0, rowMinReach = 0, rowAverageReach = 0;
+	        List<Integer> columPos = new ArrayList<Integer>();
+	        List<Object> listUsers = new ArrayList<Object>();
+	        
+	        for (Integer i = 0; i < restGet.getObjectResult().size(); i++) {
+	        	List<Object> itemRes = restGet.getObjectResult().get(i);
+	        	column++;
+	        	if (itemRes.get(0).toString().toLowerCase().equals(RANGE_CAMPAIGN.toLowerCase())) {
+	        		listUsers = itemRes;
+	        		break;
+				}
+	        }
+	        
+	        //INSERTAR OBJETO LISTADO DE USUARIOS
+	        if (request.getReach().getAccounts().size() > 0) {
+		        for (AccountsAverageModel userProcessed : request.getReach().getAccounts()) {
+		        	row = 0;
+		        	for (Object userFile : listUsers) {
+		        		row++;
+		        		if (!userFile.toString().toLowerCase().equals("usuarios")) {
+			        		if (userProcessed.getAccount().toLowerCase().equals(userFile.toString().toLowerCase())) {
+			        			List<List<Object>> values = new ArrayList<List<Object>>();
+			        			List<Object> val = new ArrayList<Object>();
+			        			String range ="";
+			        			range = RANGE_CAMPAIGN.toLowerCase().trim() + "!E" + row + ":" + "G" + row;
+			    				
+			        			System.out.println(userProcessed.getAccount().toLowerCase());
+			        			System.out.println(range);
+			        			log.info("");
+			        			val.add(userProcessed.getMin());
+			    				val.add(userProcessed.getAverage());
+			    				val.add(userProcessed.getMax());
+			    				values.add(val);
+			    		        ValueRange bodyPost = new ValueRange()
+			    		                .setValues(values);
+			    		        	Sheets.Spreadsheets.Values.Update res =
+			    		    		service.spreadsheets().values().update(request.getSpreadsheetId(), range, bodyPost);
+			    		        res.setValueInputOption(valueInputOption).execute();
+			    		        result.setCode(200);
+			    		        result.setMessage("OK");
+			    		        Thread.sleep(600);
+							}
+						}
+
+					}
+				}
+			}
+	        else {
+	        	result.setCode(201);
+	        	result.setMessage("El procesamiento no cuenta con ninguna cuenta");
+	        }
+	        
+		      //INSERTAR OBJETO ALCANCE
+	        String[] arrRangAve = RANGE_AVERAGE.toString().split(",");
+	        for (int i = 0; i < 3; i++) {
+	        	Integer pos = Integer.parseInt(arrRangAve[1]) + i;
+		        String range = RANGE_CAMPAIGN.toLowerCase().trim() + "!" +arrRangAve[0] + pos;
+				List<List<Object>> values = new ArrayList<List<Object>>();
+				List<Object> val = new ArrayList<Object>();
+				
+				Float valRech = (float) 0;
+				switch (i) {
+				case 0:
+					valRech = request.getReach().getMax();
+					break;
+				case 1:
+					valRech = request.getReach().getAverage();
+					break;
+				case 2:
+					valRech = request.getReach().getMin();
+					break;
+
+				default:
+					break;
+				}
+				
+				val.add(valRech);
+				values.add(val);
+		        ValueRange bodyPost = new ValueRange()
+		                .setValues(values);
+		        	Sheets.Spreadsheets.Values.Update res =
+		    		service.spreadsheets().values().update(request.getSpreadsheetId(), range, bodyPost);
+		        res.setValueInputOption(valueInputOption).execute();
+		        System.out.println();
+			}
+    		
+    		return result;
+		} catch (Exception e) {
+			log.error("####################################################");
+			log.error("#######__ERROR__updateAverageCampaign__#############");
+			log.error("####################################################");
+			log.error(e.getMessage());
+			result.setCode(500);
+			result.setMessage(e.getMessage());
+			return result;
+		}
+    }
+
+    /****************************
+     SERVICIO PARA ALMACENAR Y PROCESAR LOS PORCENTAJES DE ALCANCE LA CARGA (SOLO CON EL LINK EL ARCHIVO)
+     ****************************/
+    public AverageCampaignResponse processAverage (AverageCampaignRequest request) {
+    	
+    	log.info("####_ERROR------PROCESS-ACCOUNTS----AVERAGE-----_####");
+    	log.info("=>SheetID: " + request.getSpreadsheetId());
+    	AverageCampaignResponse result = new AverageCampaignResponse();
+    	try {
+    		
+    		GetUsersCampaignResponse req = getInfoUsers(request.getSpreadsheetId(), "");
+    		if (req.getCode() == 200) {
+				result.setCode(200);
+				result.setMessage("OK");
+			}
+    		else {
+    			result.setCode(500);
+    			result.setMessage(req.getMessage());
+    		}
+    		
+    		return result;
+		} catch (Exception e) {
+			log.error("#####################################################");
+			log.error("####_ERROR------PROCESS-ACCOUNTS----AVERAGE-----_####");
+			log.error("#####################################################");
+			log.error(e.getMessage());
+			result.setCode(500);
+			result.setMessage(e.getMessage());
+			return result;
+		}
+    }
+
+    /****************************
+    SERVICIO PARA OBTENER LAS IMÁGENES DE LAS CUENTAS MEDIANTE EL STREAM Y ALMACENARLAS EN DB 
+    ****************************/
+    public void getImagesStream() {
+    	log.info("##############################################");
+    	log.info("############___getImagesStream___#############");
+    	log.info("##############################################");
+		try {
+			
+		} catch (Exception ex) {
+			log.error("#######################___ERROR__getImagesStream__");
+			log.error(ex.getMessage());
+		}
+	}
 }

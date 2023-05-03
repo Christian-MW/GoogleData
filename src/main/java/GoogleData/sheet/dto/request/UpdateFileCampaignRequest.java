@@ -4,6 +4,9 @@ public class UpdateFileCampaignRequest {
 	private String type;
 	private String account;
 	private String sheet;
+	private Integer followers;
+	private String link;
+	
 	
 	public String getType() {
 		return type;
@@ -22,6 +25,18 @@ public class UpdateFileCampaignRequest {
 	}
 	public void setSheet(String sheet) {
 		this.sheet = sheet;
+	}
+	public Integer getFollowers() {
+		return followers;
+	}
+	public void setFollowers(Integer followers) {
+		this.followers = followers;
+	}
+	public String getLink() {
+		return link;
+	}
+	public void setLink(String link) {
+		this.link = link;
 	}
 	
 }

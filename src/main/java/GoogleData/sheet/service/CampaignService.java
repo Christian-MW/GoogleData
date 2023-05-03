@@ -10,4 +10,6 @@ public interface CampaignService {
 	AddCampaignResponse addCampaign (AddCampaignRequest request);
 	void updateFileCampaign(UpdateFileCampaignRequest request);
 	void updateStatusCampaign(updateStatusCampaignRequest request);
+	AverageCampaignResponse updateAverageCampaign (AverageCampaignRequest request);
+	AverageCampaignResponse processAverage (AverageCampaignRequest request);
 }

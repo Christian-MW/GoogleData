@@ -35,7 +35,7 @@ import com.google.gson.Gson;
 
 import GoogleData.sheet.config.GoogleAuthorizationConfig;
 import GoogleData.sheet.impl.CampaignImpl;
-import GoogleData.sheet.model.CampaignStreamModel;
+import GoogleData.sheet.model.*;
 
 @Component
 public class Utilities {
@@ -51,6 +51,10 @@ public class Utilities {
     private String URL_ADD_STREAM;
     @Value("${url.get.users.stream}")
     private String URL_GET_USERS_STREAM;
+    @Value("${url.save.users.campaign}")
+    private String URL_USERS_SAVE;
+    @Value("${url.scrapper.melt}")
+    private String URL_SCRAPPER_MELT;
     private static Logger log = Logger.getLogger(CampaignImpl.class);
     
 	public String numToLetter(Integer num) {
@@ -152,6 +156,82 @@ public class Utilities {
 		}
 	}
 	
+	public void sendUsersProcessAverage(List<String> users, String sheetID) {
+		log.info("#########################################");
+		log.info("#####___sendUsersProcessAverage___#######");
+		log.info("#########################################");
+		Gson gson = new Gson();
+		try {
+			ReachScrapperModel req = new ReachScrapperModel();
+			req.setAccount(users);
+			req.setSpreadsheetId(sheetID);
+			System.out.println("req: " + new Gson().toJson(req));
+			
+			String path = URL_SCRAPPER_MELT + "process/average";
+			var request = HttpRequest.newBuilder()
+					.uri(URI.create(path))
+					.header("Content-type", "application/json")
+					.POST(HttpRequest.BodyPublishers.ofString(new Gson().toJson(req)))
+					.build();
+			var client = HttpClient.newHttpClient();
+			var response = client.send(request, HttpResponse.BodyHandlers.ofString());
+			
+			log.info("##=>Response_____sendUsersProcessAverage: ");
+			log.info(response.statusCode());
+			log.info(response.body());
+			log.info(response.body().getClass());
+			ObjectMapper mapper = new ObjectMapper();
+			Map<String, Object> map = mapper.readValue(response.body(), Map.class);
+			log.info("########========> RESPONSE---sendUsersProcessAverage__" + gson.toJson(map));
+			
+			/*if (response.statusCode() == 200)
+				return true;
+			else 
+				return false;*/
+			
+			
+		} catch (Exception e) {
+			log.error("#####__ERROR___sendUsersProcessAverage___#######");
+			log.error(e.getMessage());
+		}
+	}
+	
+	public boolean saveUsersDB(List<UsersDB> users) {
+		Boolean result = false;
+		log.info("#####################################");
+		log.info("##########__SAVE_USERS__#############");
+		try {
+			Gson gson = new Gson();
+			log.info("USERS: " + new Gson().toJson(users));
+			System.out.println("USERS: " + new Gson().toJson(users));
+			String path = URL_USERS_SAVE + "account/add";
+			var request = HttpRequest.newBuilder()
+					.uri(URI.create(path))
+					.header("Content-type", "application/json")
+					.POST(HttpRequest.BodyPublishers.ofString(new Gson().toJson(users)))
+					.build();
+			var client = HttpClient.newHttpClient();
+			var response = client.send(request, HttpResponse.BodyHandlers.ofString());
+			
+			log.info("##=>Response_____saveUsersDB: ");
+			log.info(response.statusCode());
+			log.info(response.body());
+			log.info(response.body().getClass());
+			ObjectMapper mapper = new ObjectMapper();
+			Map<String, Object> map = mapper.readValue(response.body(), Map.class);
+			log.info("########========> RESPONSE---saveUsersDB__" + gson.toJson(map));
+			
+			if (response.statusCode() == 200)
+				return true;
+			else 
+				return false;
+			
+			
+		} catch (Exception e) {
+			return false;
+		}
+	}
+	
 	public void getJSONusers(String campaign) {
 		try {
 			CampaignStreamModel request = new CampaignStreamModel();
@@ -176,8 +256,7 @@ public class Utilities {
 			log.error(ex.getMessage());
 		}
 	}
-	
-	
+
 	public void createFile(String url, String nameFile, String content) {
 		log.info("####Crear archivo de usuarios####");
 		try {

@@ -3,6 +3,7 @@ package GoogleData.sheet.controller;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,6 +15,7 @@ import GoogleData.sheet.service.CampaignService;
 
 @RestController
 @RequestMapping(value="/GoogleData")
+@CrossOrigin("*")
 public class CampaignRest {
 	private static Logger log = Logger.getLogger(CampaignRest.class);
 	@Autowired
@@ -45,4 +47,23 @@ public class CampaignRest {
 		log.info("##################################");
 		campaignService.updateStatusCampaign(request);
 	}
+	
+	@PostMapping(value="/campaign/updateAverage", 
+	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	public AverageCampaignResponse updateAverageCampaign(@RequestBody AverageCampaignRequest request) {
+		log.info("##################################");
+		log.info("######_UPDATE-*AVERAGE*-CAMPAIGN_######");
+		log.info("##################################");
+		return campaignService.updateAverageCampaign(request);
+	}
+	
+	@PostMapping(value="/processAccounts/Average", 
+	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	public AverageCampaignResponse processAverage(@RequestBody AverageCampaignRequest request) {
+		log.info("####################################################");
+		log.info("######_------PROCESS-ACCOUNTS----AVERAGE-----_######");
+		log.info("####################################################");
+		return campaignService.processAverage(request);
+	}
+	
 }
