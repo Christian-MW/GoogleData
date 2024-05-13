@@ -10,6 +10,7 @@ public class MeditionFSRequest {
 	private String range;
 	private String columns;
 	private String slide_id;
+	private Integer numberSlide;
 	private List<ObjMelt> objectResult;
 
 	
@@ -36,6 +37,12 @@ public class MeditionFSRequest {
 	}
 	public void setSlide_id(String slide_id) {
 		this.slide_id = slide_id;
+	}
+	public Integer getNumberSlide() {
+		return numberSlide;
+	}
+	public void setNumberSlide(Integer numberSlide) {
+		this.numberSlide = numberSlide;
 	}
 	public List<ObjMelt> getObjectResult() {
 		return objectResult;

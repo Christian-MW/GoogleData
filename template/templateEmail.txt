@@ -1,0 +1,123 @@
+<html lang="es">
+   <head>
+   </head>
+   <body>
+      <div style="margin:0px auto;padding:0px;word-wrap:normal;word-spacing:normal;background-color:#ffffff">
+         <div role="article" aria-label="email_name" lang="es" style="font-size:1rem">
+            <table role="none" width="100%" border="0" cellspacing="0" align="center" cellpadding="0">
+               <tbody>
+                  <tr>
+                     <td align="center" valign="top">
+                        <table role="none" width="670" border="0" cellspacing="0" cellpadding="0" style="width:670px;table-layout:fixed">
+                           <tbody>
+                              <tr>
+                                 <td align="center" valign="top" style="padding:10px 5px 10px 5px">
+                                    <table role="none" width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
+                                       <tbody>
+                                          <tr>
+                                             <td align="center" valign="top" style="border:0px solid #c0c0c0;border-radius:35px;background-color:#ffffff">
+                                                <table role="none" width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
+                                                   <tbody>
+                                                      <tr>
+                                                         <td align="right" valign="top" style="padding:20px 15px">
+                                                            <p> {{date}} </p>
+                                                         </td>
+                                                      </tr>
+                                                      <tr id="m_3161499452402708492m_148816359296805764content-blocks">
+                                                         <td align="center" valign="top" style="padding-bottom:15px">
+                                                            <table role="none" width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
+                                                               <tbody>
+                                                                  <tr>
+                                                                     <td>
+                                                                        <table role="none" width="100%" border="0" cellspacing="0" cellpadding="0">
+                                                                           <tbody>
+                                                                              <tr>
+                                                                                 <td bgcolor="transparent" style="background-color:transparent;border-color:#c0c0c0;border-radius:20px;border-style:solid;border-width:1px;padding:0px 0px 0px 0px">
+                                                                                    <table role="none" width="100%" border="0" cellspacing="0" cellpadding="0">
+                                                                                       <tbody>
+                                                                                          <tr>
+                                                                                             <td align="left" valign="top" style="padding:0px 15px;text-align:left">
+                                                                                                <h4><span style="color:rgb(28,162,21);font-family:Arial,Helvetica,sans-serif"><b>LO QUE NECESITAS SABER</b></span></h4>
+                                                                                             </td>
+                                                                                          </tr>
+                                                                                          <tr>
+                                                                                             <td align="left" valign="top" style="padding:0px 15px;text-align:left">
+                                                                                                <!--<h2><span style="color:rgb(0,0,0)"><b>El Congreso de EE.UU. avanza con su ultimátum para TikTok</b></span></h2>-->
+																								<h2><span style="color:rgb(0,0,0)"><b>{{header}}</b></span></h2>
+                                                                                             </td>
+                                                                                          </tr>
+                                                                                          <tr>
+                                                                                             <td align="center" valign="top" style="padding:5px 15px 5px">
+                                                                                                <table role="none" border="0" cellspacing="0" cellpadding="0" style="margin:0 auto 0 auto">
+                                                                                                   <tbody>
+                                                                                                      <tr>
+                                                                                                         <td align="center" valign="top" style="width:630px">
+                                                                                                            <!--<img src="https://ci3.googleusercontent.com/meips/ADKq_NaZw3ktvPBLcGt9U77sNMC3KjOjNfiNJkLfKadEoWcyOpy9oUl_fvMVKvj160cTWpOX9JektMzQbeWbUsdzc0BZEAla3ED746s7-L8kqV9lfqX7mKJTP7VI3KVDIo2VqcpQdfv-lPECqEl2iyrVMxwMCKaoK9g1pQ0YChNWabaPix9T0H8u-vOov1N2qjyLoQVJw0RnkD2omRNRR6EDZ4qKXzUxPasBfYqyDqYG5IByznPdtKsIXW9hCJeCKrmbf0XZCukcg1Ky3cunpKaO-tjYXhTKXiQzfYgTswzx2yeLOtlJ5A=s0-d-e1-ft#https://media.beehiiv.com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/61aa211a-bd90-4b54-9c6a-1198d96372ef/2_Espresso_Body_Images_-_Rounded__85_.png?t=1710382065" alt="" height="auto" width="630" style="display:block;width:100%" border="0" class="CToWUd a6T" data-bit="iit" tabindex="0">-->
+                                                                                                            <a href="{{link}}"> 
+																												<img src="{{imagen}}" alt="" height="auto" width="630" style="display:block;width:100%" border="0" class="CToWUd a6T" data-bit="iit" tabindex="0">
+																											</a>
+																											<div class="a6S" dir="ltr" style="opacity: 0.01; left: 692.656px; top: 1299.22px;">
+                                                                                                               <span data-is-tooltip-wrapper="true" class="a5q" jsaction="JIbuQc:.CLIENT">
+                                                                                                                  <button class="VYBDae-JX-I VYBDae-JX-I-ql-ay5-ays CgzRE" jscontroller="PIVayb" jsaction="click:h5M12e;clickmod:h5M12e; pointerdown:FEiYhc; pointerup:mF5Elf; pointerenter:EX0mI; pointerleave:vpvbp; pointercancel:xyn4sd; contextmenu:xexox;focus:h06R8; blur:zjh6rb;mlnRJb:fLiPzd;" data-idom-class="CgzRE" jsname="hRZeKc" aria-label="Descargar el archivo adjunto " data-tooltip-enabled="true" data-tooltip-id="tt-c16" data-tooltip-classes="AZPksf" id="" jslog="91252; u014N:cOuCgd,Kr2w4b,xr6bB; 4:WyIjbXNnLWY6MTc5Mzk5NTA1MTc4MTI2NTk0MyJd; 43:WyJpbWFnZS9qcGVnIl0.">
+                                                                                                                     <span class="OiePBf-zPjgPe VYBDae-JX-UHGRz"></span><span class="bHC-Q" data-unbounded="false" jscontroller="LBaJxb" jsname="m9ZlFb" soy-skip="" ssk="6:RWVI5c"></span>
+                                                                                                                     <span class="VYBDae-JX-ank-Rtc0Jf" jsname="S5tZuc" aria-hidden="true">
+                                                                                                                        <span class="bzc-ank" aria-hidden="true">
+                                                                                                                           <svg height="20" viewBox="0 -960 960 960" width="20" focusable="false" class=" aoH">
+                                                                                                                              <path d="M480-336 288-528l51-51 105 105v-342h72v342l105-105 51 51-192 192ZM263.717-192Q234-192 213-213.15T192-264v-72h72v72h432v-72h72v72q0 29.7-21.162 50.85Q725.676-192 695.96-192H263.717Z"></path>
+                                                                                                                           </svg>
+                                                                                                                        </span>
+                                                                                                                     </span>
+                                                                                                                     <div class="VYBDae-JX-ano"></div>
+                                                                                                                  </button>
+                                                                                                                  <div class="ne2Ple-oshW8e-J9" id="tt-c16" role="tooltip" aria-hidden="true">Descargar</div>
+                                                                                                               </span>
+                                                                                                            </div>
+                                                                                                         </td>
+                                                                                                      </tr>
+                                                                                                   </tbody>
+                                                                                                </table>
+                                                                                             </td>
+                                                                                          </tr>
+                                                                                          <tr>
+                                                                                             <td align="start" style="padding:0px 15px;text-align:start;word-break:break-word">
+                                                                                                <p><span>{{body}}</span></p>
+                                                                                             </td>
+                                                                                          </tr>
+                                                                                          <!--<tr>
+                                                                                             <td align="start" style="padding:0px 15px;text-align:start;word-break:break-word">
+                                                                                                <p><span>La votación terminó </span><span><b>352 a 65 a favor</b></span><span> de una ley que presiona a ByteDance, el gigante tecnológico chino detrás de TikTok, a vender la app o enfrentar una prohibición total en EE. UU.</span></p>
+                                                                                             </td>
+                                                                                          </tr>-->
+                                                                                       </tbody>
+                                                                                    </table>
+                                                                                 </td>
+                                                                              </tr>
+                                                                              <tr>
+                                                                                 <td height="15px" style="line-height:1px;font-size:1px;height:15px"> &nbsp; </td>
+                                                                              </tr>
+                                                                           </tbody>
+                                                                        </table>
+                                                                     </td>
+                                                                  </tr>
+                                                               </tbody>
+                                                            </table>
+                                                         </td>
+                                                      </tr>
+                                                   </tbody>
+                                                </table>
+                                             </td>
+                                          </tr>
+                                       </tbody>
+                                    </table>
+                                 </td>
+                              </tr>
+                           </tbody>
+                        </table>
+                     </td>
+                  </tr>
+               </tbody>
+            </table>
+         </div>
+      </div>
+   </body>
+</html>

@@ -162,46 +162,92 @@ public class GoogleSlideImpl implements GoogleSlideService {
 	        	String nameSH = "";
 	        	elem++;
 	        	
-	        	if (elem==6) {
-	        		TranslateX = 463775.0;
-	        		TranslateY += 703380;
+	        	if (request.getAuthors().size() <= 8) {
+		        	if (elem==5) {
+		        		TranslateX = 463775.0;
+		        		TranslateY += 703380;
+					}
 				}
+	        	if (request.getAuthors().size() >= 10) {
+		        	if (elem==6) {
+		        		TranslateX = 463775.0;
+		        		TranslateY += 703380;
+					}
+				}
+
 	        	for ( Entry<String, String> itAlcEn : hashitemAut.entrySet()) {
 	        		if (itAlcEn.getKey().toString().toLowerCase().equals("nombre")) {
 	        			nameSH = itAlcEn.getValue();
 					}
 	        		if (itAlcEn.getKey().toString().toLowerCase().equals("imagen")) {
-	        			String imageUrl = !itAlcEn.getValue().toString().isEmpty() ? itAlcEn.getValue().toString() : IMAGE_NOT_FOUND_USR;
-	        			//String slideId = request.getSlide_id();
-	        			//String imageUrl ="https://mirkoreisser.de/wp-content/uploads/2019/10/W2036_daim-dynamic-splash-14x21-1xrun-07.jpg";
-	        			//String slideId = "g1554aed1034_0_55";
-	        			
-	        		    List<Request> requests = new ArrayList<>();
-	        		    //String imageId = nameSH;
-	        		    String imageId = "item_" + (int)(Math.random()*(1-100000+1));  ;
-	        		    Dimension emu4M = new Dimension().setMagnitude(4000000.0).setUnit("EMU");
-	        		    requests.add(new Request()
-	        		        .setCreateImage(new CreateImageRequest()
-	        		            .setObjectId(imageId)
-	        		            .setUrl(imageUrl)
-	        		            .setElementProperties(new PageElementProperties()
-	        		                .setPageObjectId(slideID)
-	        		                .setSize(new Size()
-	        		                    .setHeight(emu4M)
-	        		                    .setWidth(emu4M))
-	        		                .setTransform(new AffineTransform()
-	        		                    .setScaleX(0.1481)
-	        		                    .setScaleY(0.1479)
-	        		                    .setTranslateX(TranslateX)
-	        		                    .setTranslateY(TranslateY)
-	        		                    .setUnit("EMU")))));	
+	        			try {
+		        			String imageUrl = !itAlcEn.getValue().toString().isEmpty() ? itAlcEn.getValue().toString() : IMAGE_NOT_FOUND_USR;
+		        			//String slideId = request.getSlide_id();
+		        			//String imageUrl ="https://mirkoreisser.de/wp-content/uploads/2019/10/W2036_daim-dynamic-splash-14x21-1xrun-07.jpg";
+		        			//String slideId = "g1554aed1034_0_55";
+		        			
+		        		    List<Request> requests = new ArrayList<>();
+		        		    //String imageId = nameSH;
+		        		    String imageId = "item_" + (int)(Math.random()*(1-100000+1));  ;
+		        		    Dimension emu4M = new Dimension().setMagnitude(4000000.0).setUnit("EMU");
+		        		    requests.add(new Request()
+		        		        .setCreateImage(new CreateImageRequest()
+		        		            .setObjectId(imageId)
+		        		            .setUrl(imageUrl)
+		        		            .setElementProperties(new PageElementProperties()
+		        		                .setPageObjectId(slideID)
+		        		                .setSize(new Size()
+		        		                    .setHeight(emu4M)
+		        		                    .setWidth(emu4M))
+		        		                .setTransform(new AffineTransform()
+		        		                    .setScaleX(0.1481)
+		        		                    .setScaleY(0.1479)
+		        		                    .setTranslateX(TranslateX)
+		        		                    .setTranslateY(TranslateY)
+		        		                    .setUnit("EMU")))));	
 
-	        		      BatchUpdatePresentationRequest body =
-	        		          new BatchUpdatePresentationRequest().setRequests(requests);
-	        		      BatchUpdatePresentationResponse responseImg = service.presentations().batchUpdate(request.getPresentation_id(), body).execute();
-	        		      CreateImageResponse createImageResponse = responseImg.getReplies().get(0).getCreateImage();
-	        		      System.out.println("Created image with ID: " + createImageResponse.getObjectId());
-	        		      TranslateX += 708412;
+		        		      BatchUpdatePresentationRequest body =
+		        		          new BatchUpdatePresentationRequest().setRequests(requests);
+		        		      BatchUpdatePresentationResponse responseImg = service.presentations().batchUpdate(request.getPresentation_id(), body).execute();
+		        		      CreateImageResponse createImageResponse = responseImg.getReplies().get(0).getCreateImage();
+		        		      System.out.println("Created image with ID: " + createImageResponse.getObjectId());
+		        		      TranslateX += 708412;
+						} catch (Exception ex) {
+							//#########################___NO EXISTE LA IMÁGEN
+							log.error("NO EXISTE LA IMÁGEN A INSERTAR");
+							log.error(ex.getMessage());
+		        			String imageUrl = IMAGE_NOT_FOUND_USR;
+		        			//String slideId = request.getSlide_id();
+		        			//String imageUrl ="https://mirkoreisser.de/wp-content/uploads/2019/10/W2036_daim-dynamic-splash-14x21-1xrun-07.jpg";
+		        			//String slideId = "g1554aed1034_0_55";
+		        			
+		        		    List<Request> requests = new ArrayList<>();
+		        		    //String imageId = nameSH;
+		        		    String imageId = "item_" + (int)(Math.random()*(1-100000+1));  ;
+		        		    Dimension emu4M = new Dimension().setMagnitude(4000000.0).setUnit("EMU");
+		        		    requests.add(new Request()
+		        		        .setCreateImage(new CreateImageRequest()
+		        		            .setObjectId(imageId)
+		        		            .setUrl(imageUrl)
+		        		            .setElementProperties(new PageElementProperties()
+		        		                .setPageObjectId(slideID)
+		        		                .setSize(new Size()
+		        		                    .setHeight(emu4M)
+		        		                    .setWidth(emu4M))
+		        		                .setTransform(new AffineTransform()
+		        		                    .setScaleX(0.1481)
+		        		                    .setScaleY(0.1479)
+		        		                    .setTranslateX(TranslateX)
+		        		                    .setTranslateY(TranslateY)
+		        		                    .setUnit("EMU")))));	
+
+		        		      BatchUpdatePresentationRequest body =
+		        		          new BatchUpdatePresentationRequest().setRequests(requests);
+		        		      BatchUpdatePresentationResponse responseImg = service.presentations().batchUpdate(request.getPresentation_id(), body).execute();
+		        		      CreateImageResponse createImageResponse = responseImg.getReplies().get(0).getCreateImage();
+		        		      System.out.println("Created image with ID: " + createImageResponse.getObjectId());
+		        		      TranslateX += 708412;
+						}
 					}
 				}
 			}

@@ -12,4 +12,5 @@ public interface CampaignService {
 	void updateStatusCampaign(updateStatusCampaignRequest request);
 	AverageCampaignResponse updateAverageCampaign (AverageCampaignRequest request);
 	AverageCampaignResponse processAverage (AverageCampaignRequest request);
+	
 }

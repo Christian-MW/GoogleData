@@ -24,5 +24,4 @@ public class SheetRequest {
 	public void setColumns(String columns) {
 		this.columns = columns;
 	}
-	
 }

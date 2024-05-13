@@ -48,6 +48,8 @@ import com.google.common.base.CharMatcher;
 import com.google.gson.Gson;
 
 import GoogleData.sheet.config.GoogleAuthorizationConfig;
+import GoogleData.sheet.dao.entity.*;
+import GoogleData.sheet.dao.repository.AccountRepository;
 import GoogleData.sheet.dto.request.*;
 import GoogleData.sheet.dto.response.*;
 import GoogleData.sheet.model.*;
@@ -85,6 +87,8 @@ public class CampaignImpl implements CampaignService {
     Utilities utilities;
 	@Autowired
 	GoogleImpl googleImpl;
+	@Autowired
+	AccountRepository accountRepository;
     
     public AddCampaignResponse addCampaign (AddCampaignRequest request) {
     	AddCampaignResponse result = new AddCampaignResponse();
@@ -683,6 +687,7 @@ public class CampaignImpl implements CampaignService {
 		        	Sheets.Spreadsheets.Values.Update res =
 		    		service.spreadsheets().values().update(request.getSpreadsheetId(), range, bodyPost);
 		        res.setValueInputOption(valueInputOption).execute();
+		        Thread.sleep(600);
 		        System.out.println();
 			}
     		
@@ -708,7 +713,22 @@ public class CampaignImpl implements CampaignService {
     	AverageCampaignResponse result = new AverageCampaignResponse();
     	try {
     		
+    		/*######__CUENTAS DE PRUEBA__######*/
+    		/*List<String> ArrayUsers = new ArrayList<String>();
+    		ArrayUsers.add("@Barbara_Jacob");
+    		ArrayUsers.add("@JulyVarga");
+    		ArrayUsers.add("@mty_360");
+    		ArrayUsers.add("@Conacyt_MX");
+    		ArrayUsers.add("@Humcortes");
+    		ArrayUsers.add("@blue_athanasia");
+    		ArrayUsers.add("@USConsuladoHer");
+    		ArrayUsers.add("@ExpansionMx");
+    		ArrayUsers.add("@Edomex");
+    		getImagesStream(ArrayUsers);*/
+    		
     		GetUsersCampaignResponse req = getInfoUsers(request.getSpreadsheetId(), "");
+    		System.out.println(new Gson().toJson(req));
+    		getImagesStream(req.getUsers());
     		if (req.getCode() == 200) {
 				result.setCode(200);
 				result.setMessage("OK");
@@ -733,15 +753,49 @@ public class CampaignImpl implements CampaignService {
     /****************************
     SERVICIO PARA OBTENER LAS IMÁGENES DE LAS CUENTAS MEDIANTE EL STREAM Y ALMACENARLAS EN DB 
     ****************************/
-    public void getImagesStream() {
+    public void getImagesStream(List<String> userList) {
     	log.info("##############################################");
     	log.info("############___getImagesStream___#############");
     	log.info("##############################################");
 		try {
+			List<String> accounts = new ArrayList<String>();
+			for (String user : userList) {
+				accounts.add(user.replace("@", ""));
+			}
+			
+			List<Object> usersStream = utilities.getUsersInfoStream(accounts);
+			
+			if (usersStream != null) {
+				for (Object user : usersStream) {
+					HashMap<String,String> objUser = new HashMap<>();
+					objUser = (HashMap<String,String>) user;
+					String nameUser = objUser.get("name").toString();
+					String urlImage = objUser.get("profile_image_url").toString().replace("normal", "400x400");
+					String account = "@" + objUser.get("username").toString();
+					
+					List<AccountEntity> userExist = accountRepository.findByScreanNameIgnoreCase(account);
+					if (userExist.size() > 0) {
+						AccountEntity userDB = userExist.get(0);
+						userDB.setName(nameUser);
+						userDB.setImage(urlImage);
+						accountRepository.save(userDB);
+						log.info(user);
+					}
+					
+					log.info(user);
+				}
+			}
+			
+			
+			AccountEntity userBD = new AccountEntity();
+			List<AccountEntity> ListAccounts = accountRepository.findAll();
+			log.info(new Gson().toJson(ListAccounts));
 			
 		} catch (Exception ex) {
 			log.error("#######################___ERROR__getImagesStream__");
 			log.error(ex.getMessage());
 		}
 	}
+    
+    
 }

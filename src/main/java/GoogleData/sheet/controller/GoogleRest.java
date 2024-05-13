@@ -60,11 +60,16 @@ public class GoogleRest {
 		return googleService.meditionFileSlides(request);
 	}	
 	
+	@PostMapping(value="/sheets/LogExtension", 
+	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public LogExtensionResponse logExtension(@RequestBody LogExtensionRequest request) {
+		return googleService.logExtension(request);
+   }
 	
 	@PostMapping(value="/sheets/test", 
 	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public void test(@RequestBody SheetRequest request) {
-		googleService.test(request);
+    public AIResponse test(@RequestBody AIRequest request) {
+		return googleService.test(request);
    }
 	
 }
