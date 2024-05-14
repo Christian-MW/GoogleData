@@ -24,6 +24,7 @@ public class WordPressRest {
 	
 	@PostMapping(value="/API/SaveConfiguration", 
 	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	@CrossOrigin(origins = "*")
 	public ResponseEntity<?> saveConfiguration(@RequestBody WordPressRequest request) {
 		return wordPressService.saveConfiguration(request);
 	}

@@ -23,6 +23,7 @@ public class CampaignRest {
 	
 	@PostMapping(value="/campaign/addcampaign", 
 	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	@CrossOrigin(origins = "*")
 	public AddCampaignResponse getDataSpreadsheet(@RequestBody AddCampaignRequest request) {
 		log.info("##################################");
 		log.info("##########_ADD-CAMPAIGN_##########");
@@ -32,6 +33,7 @@ public class CampaignRest {
 	
 	@PostMapping(value="/campaign/updateFile", 
 	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	@CrossOrigin(origins = "*")
 	public void updateFileCampaign(@RequestBody UpdateFileCampaignRequest request) {
 		log.info("##################################");
 		log.info("######_UPDATE-FILE-CAMPAIGN_######");
@@ -41,6 +43,7 @@ public class CampaignRest {
 	
 	@PostMapping(value="/campaign/updateStatus", 
 	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	@CrossOrigin(origins = "*")
 	public void updateStatusCampaign(@RequestBody updateStatusCampaignRequest request) {
 		log.info("##################################");
 		log.info("######_UPDATE-*STATUS*-CAMPAIGN_######");
@@ -50,6 +53,7 @@ public class CampaignRest {
 	
 	@PostMapping(value="/campaign/updateAverage", 
 	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	@CrossOrigin(origins = "*")
 	public AverageCampaignResponse updateAverageCampaign(@RequestBody AverageCampaignRequest request) {
 		log.info("##################################");
 		log.info("######_UPDATE-*AVERAGE*-CAMPAIGN_######");
@@ -59,6 +63,7 @@ public class CampaignRest {
 	
 	@PostMapping(value="/processAccounts/Average", 
 	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	@CrossOrigin(origins = "*")
 	public AverageCampaignResponse processAverage(@RequestBody AverageCampaignRequest request) {
 		log.info("####################################################");
 		log.info("######_------PROCESS-ACCOUNTS----AVERAGE-----_######");

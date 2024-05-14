@@ -18,6 +18,7 @@ import GoogleData.sheet.service.ToolsService;
 
 @RestController
 @RequestMapping(value="/Tools")
+@CrossOrigin(origins = "*")
 public class ToolsRest {
 
 	private static Logger log = Logger.getLogger(GoogleRest.class);
@@ -27,18 +28,21 @@ public class ToolsRest {
 	
 	@PostMapping(value="/sendMessage", 
 	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	@CrossOrigin(origins = "*")
     public SendMessageResponse test(@RequestBody SendMessageRequest request) {
 		return toolsService.sendMessage(request);
    }
 	
 	@PostMapping(value="/sendChatgpt", 
 	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	@CrossOrigin(origins = "*")
     public AIResponse test(@RequestBody AIRequest request) {
 		return toolsService.sendChatgpt(request);
    }
 	
 	@PostMapping(value="/process/lineschatgpt", 
 	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	@CrossOrigin(origins = "*")
     public ResponseProcessLinesChatGPT processLines(@RequestBody RequestProcessLinesChatGPT request) {
 		return toolsService.procesLines(request);
    }

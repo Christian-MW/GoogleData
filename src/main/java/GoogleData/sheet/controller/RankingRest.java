@@ -24,6 +24,7 @@ public class RankingRest {
 	
 	@PostMapping(value="/ranking/addRanking", 
 	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	@CrossOrigin(origins = "*")
 	public AddCampaignResponse addRanking(@RequestBody AddCampaignRequest request) {
 		log.info("####################################################");
 		log.info("######_--------------ADD--RANKING------------_######");
