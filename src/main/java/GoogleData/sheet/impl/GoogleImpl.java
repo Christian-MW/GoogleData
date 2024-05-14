@@ -153,8 +153,14 @@ public class GoogleImpl implements GoogleService {
 	        		if(item.size() > 0) {
 		        		List<Object> value = new ArrayList<Object>();
 		        		for(Object itmArr : arrCF) {
-	        				System.out.println(item.get((int)itmArr));
-	        				value.add(item.get((int)itmArr));
+		        			try {
+		        				System.out.println(item.get((int)itmArr));
+		        				value.add(item.get((int)itmArr));
+							} catch (Exception e) {
+		        				System.out.println("vacío");
+		        				value.add("");
+							}
+
 		        			
 		        			/*try {
 			        			if(!item.get((int)itmArr).toString().isEmpty()) {
@@ -1211,7 +1217,8 @@ public class GoogleImpl implements GoogleService {
 			GetListSheetsResponse resListSheets = getElementsListSpreadsheet(reqListSheets);
 			// Se valida si la hoja existe en el Spreadsheet
 			for (String itemSheetBD : resListSheets.getListSheets()) {
-				if (nameSheet.equals(utilities.cleanNameSheet(itemSheetBD.toLowerCase().trim()))) {
+				String it = utilities.cleanNameSheet(itemSheetBD.toLowerCase().trim());
+				if (nameSheet.equals(it)) {
 					res = true;
 				}
 			}

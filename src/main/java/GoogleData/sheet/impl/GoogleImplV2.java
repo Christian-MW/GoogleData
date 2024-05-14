@@ -778,11 +778,11 @@ public class GoogleImplV2 implements GoogleRestV2Service {
 					googleImpl.createSheet(request.getSpreadsheet_id(), sheetNew);
 					//###__AGREGANDO ENCABEZADOS
 					String Headers_R = sheetNew + "!A1";
-		        	List<List<Object>> valuesHeader = new ArrayList<List<Object>>();
-					List<Object> valHead = new ArrayList<Object>();
-					for (int i = 0; i < HeadersSearch.length; i++) {
-						valHead.add(HeadersSearch[i]);
-					}
+			        	List<List<Object>> valuesHeader = new ArrayList<List<Object>>();
+						List<Object> valHead = new ArrayList<Object>();
+						for (int i = 0; i < HeadersSearch.length; i++) {
+							valHead.add(HeadersSearch[i]);
+						}
 					//if(request.getObjectResult().get(0).getCommentsList().size() > 0) {
 						for (int i = 0; i < HeadersComm.length; i++) {
 							valHead.add(HeadersComm[i]);
