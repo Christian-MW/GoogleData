@@ -1,5 +1,6 @@
 package GoogleData.sheet.model;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class SearchV2Model {
@@ -11,6 +12,8 @@ public class SearchV2Model {
 	private long impressions;
 	private long reach;
 	private SearchV2DW downloads;
+	private ArrayList<Object> dataAlcance;
+	//private List<DataAlcanceModel> dataAlcance;
 	
 	public String getName() {
 		return name;
@@ -60,6 +63,11 @@ public class SearchV2Model {
 	public void setDownloads(SearchV2DW downloads) {
 		this.downloads = downloads;
 	}
-	
+	public ArrayList<Object> getDataAlcance() {
+		return dataAlcance;
+	}
+	public void setDataAlcance(ArrayList<Object> dataAlcance) {
+		this.dataAlcance = dataAlcance;
+	}
 	
 }

@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.model.ValueRange;
+import com.google.common.base.CharMatcher;
 
 import GoogleData.sheet.dto.request.AddDataTikTokRequest;
 import GoogleData.sheet.dto.request.AddImgSlideRequest;
@@ -34,6 +35,7 @@ import GoogleData.sheet.dto.response.MeditionFSResponse;
 import GoogleData.sheet.dto.response.ResponseBase;
 import GoogleData.sheet.dto.response.SheetResponse;
 import GoogleData.sheet.dto.response.SlideResponse;
+import GoogleData.sheet.model.DataAlcanceModel;
 import GoogleData.sheet.model.ObjDownV2;
 import GoogleData.sheet.model.ObjMelt;
 import GoogleData.sheet.model.ObjMeltSearch;
@@ -345,6 +347,7 @@ public class GoogleImplV2 implements GoogleRestV2Service {
 	/**INSERTAR OBJETO DE LISTADO DE BUSQUEDAS EN MELT PARA LA VERSIÓN 2*/
 	public ResponseEntity<?> addDataToSearchFile (SearchFileV2Request request){
 		Map<String, Object> map = new HashMap<String, Object>();
+		String charsToRetain = "0123456789";
 		try {
 			boolean existRegister = false;
 			if(request.getObjectResult().size() == 0) {
@@ -374,7 +377,7 @@ public class GoogleImplV2 implements GoogleRestV2Service {
 			        sdf.setTimeZone(zonaHorariaMexico);
 			        String horaMexico = sdf.format(Date);
 					
-					String currentH = Headers[3]+ "-" + horaMexico;
+					String currentH = Headers[7]+ "-" + horaMexico;
 		        	//Validando si existen registros del día de hoy
 		        	String letterExist = utilities.numToLetter(restGet.objectResult.size());
 		        	String HeadersExist = nameSheetMeditionV2.trim() + "!" + letterExist + 1;
@@ -382,13 +385,13 @@ public class GoogleImplV2 implements GoogleRestV2Service {
 		        	String lastH = ArrayH[ArrayH.length -1 ].trim().replaceAll("]", "");
 		        	if(lastH.equals(currentH)) {
 		        		//Existen registros con la fecha de hoy y hay que reemplazalos
-		        		letterInit = utilities.numToLetter(restGet.objectResult.size()-3);
+		        		letterInit = utilities.numToLetter(restGet.objectResult.size()-7);
 		        		existRegister = true;
 		        	}
 		        	else {
 		        		//NO EXISTEN registros de hoy y se insertan en columnas nuevas
 		        		//Insertando encabezados
-						for (int i = 0; i < 4; i++) {
+						for (int i = 0; i < 8; i++) {
 							valHead.add(Headers[i] + "-" + horaMexico);
 						}
 						valuesHeader.add(valHead);
@@ -408,6 +411,23 @@ public class GoogleImplV2 implements GoogleRestV2Service {
 								String fileItem = nameSheetMeditionV2.trim() + "!" + letterInit + fila;
 								List<List<Object>> valuesItems = new ArrayList<List<Object>>();
 								List<Object> valItem = new ArrayList<Object>();
+								
+								
+								//###_Insertando elementos de alcance Unexplored
+								for (Object itemAlc : request.getObjectResult().get(j).getDataAlcance()) {
+									HashMap<String,String> hashitemAlc = (HashMap<String,String>) itemAlc;
+									for ( Entry<String, String> itAlcEn : hashitemAlc.entrySet()) {
+										if (itAlcEn.getValue().toString().equals("Alcance")) {
+											valItem.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(hashitemAlc.get("Twitter"))));
+											valItem.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(hashitemAlc.get("Facebook"))));
+											valItem.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(hashitemAlc.get("Whatsapp"))));
+											valItem.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(hashitemAlc.get("Totales"))));
+										}
+										
+									}
+								}
+								
+								
 								valItem.add(request.getObjectResult().get(j).getAuthors());
 								valItem.add(request.getObjectResult().get(j).getImpressions());
 								valItem.add(request.getObjectResult().get(j).getMentions());
