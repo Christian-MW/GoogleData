@@ -11,6 +11,7 @@ public class SearchV2Model {
 	private long views;
 	private long impressions;
 	private long reach;
+	private String urlListTweets;
 	private SearchV2DW downloads;
 	private ArrayList<Object> dataAlcance;
 	//private List<DataAlcanceModel> dataAlcance;
@@ -56,6 +57,12 @@ public class SearchV2Model {
 	}
 	public void setReach(long reach) {
 		this.reach = reach;
+	}
+	public String getUrlListTweets() {
+		return urlListTweets;
+	}
+	public void setUrlListTweets(String urlListTweets) {
+		this.urlListTweets = urlListTweets;
 	}
 	public SearchV2DW getDownloads() {
 		return downloads;

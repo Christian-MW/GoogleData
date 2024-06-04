@@ -18,5 +18,5 @@ public interface GoogleService {
 	MeditionFSResponse meditionFileSlides (MeditionFSRequest request);
 	LogExtensionResponse logExtension (LogExtensionRequest request);
 	
-	AIResponse test(AIRequest request);
+	AIResponse test(TestRequest request);
 }

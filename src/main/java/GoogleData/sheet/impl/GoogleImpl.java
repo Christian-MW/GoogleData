@@ -15,11 +15,18 @@ import com.google.api.services.sheets.v4.model.AppendValuesResponse;
 import com.google.api.services.sheets.v4.model.BatchGetValuesResponse;
 import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetRequest;
 import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetResponse;
+import com.google.api.services.sheets.v4.model.CellData;
+import com.google.api.services.sheets.v4.model.CellFormat;
 import com.google.api.services.sheets.v4.model.ClearValuesRequest;
+import com.google.api.services.sheets.v4.model.Color;
+import com.google.api.services.sheets.v4.model.DeleteSheetRequest;
 import com.google.api.services.sheets.v4.model.DimensionRange;
 import com.google.api.services.sheets.v4.model.FindReplaceRequest;
 import com.google.api.services.sheets.v4.model.FindReplaceResponse;
+import com.google.api.services.sheets.v4.model.GridRange;
 import com.google.api.services.sheets.v4.model.InsertDimensionRequest;
+import com.google.api.services.sheets.v4.model.MergeCellsRequest;
+import com.google.api.services.sheets.v4.model.RepeatCellRequest;
 import com.google.api.services.sheets.v4.model.Request;
 import com.google.api.services.sheets.v4.model.Sheet;
 import com.google.api.services.sheets.v4.model.SheetProperties;
@@ -68,6 +75,7 @@ import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.sheets.v4.model.SpreadsheetProperties;
+import com.google.api.services.sheets.v4.model.TextFormat;
 import com.google.api.services.sheets.v4.model.UpdateSpreadsheetPropertiesRequest;
 import com.google.api.services.sheets.v4.model.UpdateValuesResponse;
 import com.google.api.services.sheets.v4.model.ValueRange;
@@ -76,6 +84,10 @@ import com.google.api.client.googleapis.json.GoogleJsonError;
 import com.google.api.client.json.JsonFactory;
 import java.io.FileNotFoundException;
 import com.google.api.client.util.store.FileDataStoreFactory;
+
+import com.google.api.services.drive.Drive;
+import com.google.api.services.drive.DriveScopes;
+import com.google.api.services.drive.model.Permission;
 
 
 @Service("GoogleImpl")
@@ -1043,6 +1055,43 @@ public class GoogleImpl implements GoogleService {
 		}
 	}
 	
+ 	public boolean deleteSheet(String spreadsheet_id, String nameSheet) {
+ 		log.info("########___ELIMINANDO HOJA___##########");
+		try {
+			Sheets service = getServiceSheet();
+			// Obtén el ID de la hoja llamada "Sheet1"
+			Spreadsheet spreadsheet = service.spreadsheets().get(spreadsheet_id).execute();
+			Integer sheetId = null;
+			for (var sheet : spreadsheet.getSheets()) {
+				if (nameSheet.equals(sheet.getProperties().getTitle())) {
+					sheetId = sheet.getProperties().getSheetId();
+					break;
+				}
+			}
+			if (sheetId != null) {
+	            // Crear la solicitud de eliminación de la hoja
+	            DeleteSheetRequest deleteSheetRequest = new DeleteSheetRequest().setSheetId(sheetId);
+	            Request request = new Request().setDeleteSheet(deleteSheetRequest);
+
+	            // Ejecutar la solicitud de actualización
+	            List<Request> requests = new ArrayList<>();
+	            requests.add(request);
+
+	            BatchUpdateSpreadsheetRequest body = new BatchUpdateSpreadsheetRequest().setRequests(requests);
+	            service.spreadsheets().batchUpdate(spreadsheet_id, body).execute();
+
+	            log.info("LA HOJA: " + nameSheet +", se creó con éxito");
+	            return true;
+			} else {
+				log.error("La hoja " + nameSheet+", no se encontró.");
+				return false;
+			}
+		} catch (Exception ex) {
+			log.error(ex.getMessage());
+			log.error("#########___PROBLEMAS AL ELIMINAR LA HOJA: " + nameSheet +", Del archivo: " + spreadsheet_id);
+			return false;
+		}
+ 	}
  	public GetListSheetsResponse getSheetsBySheet(String sheet_id) {
  		try {
 			SheetRequest reqListSheets = new SheetRequest();
@@ -1249,230 +1298,699 @@ public class GoogleImpl implements GoogleService {
 		}
 	}
 	
-	public AIResponse test(AIRequest request) {
-		AIResponse result = new AIResponse();
-		//################################################
-		//########Consumir servicio Búsqueda en Wikipedia
-		if (!request.getSearchWikipedia().isEmpty()) {
-			return utilities.getInfoWikipedia(request.getSearchWikipedia());
+	public Integer getIdFromSheet(String spreadsheetId, String sheetName) {
+		log.info("###############__OBTENER EL ID DE UNA HOJA DE SHEET__################");
+		try {
+			Sheets service = getServiceSheet();
+			Spreadsheet spreadsheet = service.spreadsheets().get(spreadsheetId).execute();
+			List<Sheet> sheets = spreadsheet.getSheets();
+	        Integer sheetId = null;
+	        for (Sheet sheet : sheets) {
+	            if (sheet.getProperties().getTitle().equals(sheetName)) {
+	                sheetId = sheet.getProperties().getSheetId();
+	                break;
+	            }
+	        }
+	        if (sheetId != null)
+	            log.info("La hoja: " +sheetName+ " tiene ID: "+ sheetId);
+	        else
+	        	log.info("Hoja con nombre "+sheetName+" no encontrada");
+	        
+	        return sheetId;
+		} catch (Exception ex) {
+			log.error(ex);
+			return 0;
 		}
-		//################################################
-		//########Consumir servicio ChatGPT
-		if (!request.getMessageCHATGPT().isEmpty()) {
-			//Obtener tweets del archivo
-			return utilities.sendTextChatGPT(request.getMessageCHATGPT());
+	}
+	
+	public String createFile() {
+		log.info("###########__CREANDO EL ARCHIVO DE SHEET__##########");
+		try {
+			Sheets service = getServiceSheet();
+	        // Crear una nueva hoja de cálculo
+	        Spreadsheet spreadsheet = new Spreadsheet()
+	                .setProperties(new SpreadsheetProperties()
+	                        .setTitle("Archivo de Tweets"));
+	        Spreadsheet createdSpreadsheet = service.spreadsheets().create(spreadsheet).execute();
+	        String spreadsheetId = createdSpreadsheet.getSpreadsheetId();
+
+	        // Añadir una nueva hoja con un nombre específico
+	        SheetProperties sheetProperties = new SheetProperties().setTitle("Tweets");
+	        AddSheetRequest addSheetRequest = new AddSheetRequest().setProperties(sheetProperties);
+	        Request request = new Request().setAddSheet(addSheetRequest);
+	        BatchUpdateSpreadsheetRequest batchUpdateRequest = new BatchUpdateSpreadsheetRequest()
+	                .setRequests(Collections.singletonList(request));
+
+	        BatchUpdateSpreadsheetResponse batchUpdateResponse = service.spreadsheets()
+	                .batchUpdate(spreadsheetId, batchUpdateRequest)
+	                .execute();
+
+	        log.info("Hoja creada con éxito: " + batchUpdateResponse);
+	        //Llenar la hoja con todos los elementos correspondientes de los tweets
+	        
+	        
+	        // Compartir el archivo con correos específicos
+	        Drive driveService = utilities.getServiceDrive();
+	        String fileId = spreadsheetId;  // Reemplaza con el ID del archivo que deseas compartir
+	        /*String emailAddress = "christian.garcia@mwgroup.com.mx";
+	        Permission permission = new Permission()
+	                .setType("user")
+	                .setRole("writer")
+	                .setEmailAddress(emailAddress);*/
+	        // Crear permiso para "anyone with the link"
+	        Permission permission = new Permission()
+	                .setType("anyone")
+	                .setRole("writer");
+
+	        driveService.permissions().create(fileId, permission)
+	                .setFields("id")
+	                .execute();
+	        
+	        //URL del archivo
+	        String urlFile = "https://docs.google.com/spreadsheets/d/" + spreadsheetId;
+	        log.info("##===>El archivo se creo correctamente: " + urlFile);
+	        return urlFile;
+	        
+		} catch (Exception ex) {
+			log.error(ex.getMessage());
+			log.error("######__PROBLEMAS AL CREAR EL ARCHIVO: ");
+			return "";
 		}
-		
+	}
+	
+	public void generateSheetVisual(String spreadsheet_id, String sheetName, ReportVisualModel element) {
+		try {
+			//Variables generales
+			Sheets service = getServiceSheet();
+			List<List<Object>> valuesItems = new ArrayList<List<Object>>();
+			List<Object> valItem = new ArrayList<Object>();
+			Integer NumColumn = 1;
+			Integer NumRow = 1;
+			String srow = "";
+			//###########################################################################
+			//###########___ 1.- Verificar si la hoja existe si no crearla ___###########
+			Integer sheetID = getIdFromSheet(spreadsheet_id, sheetName);
+			
+			//######################################################################
+			//###########___ 2.- Inserción de elementos en reporte ___###########
+			//##############___ 2.1 Inserción de encabezado ___##############
+			//####--2.1 --Encabezado
+			valItem.add("MEDICIÓN DE LA CONVERSACIÓN SOCIODIGITAL");
+			valuesItems.add(valItem);
+			srow = sheetName + "!" + utilities.numToLetter(NumColumn) + NumRow;
+			updateAndReplaceData(valuesItems, srow, spreadsheet_id);
+			propertiesTextSheet propertiesText = fillObjectPropsTxt(true, "aqua", "Poppins", 14, "LEFTH");
+			positionCellSheet positionText = fillObjectPosText(0,1,0,1);
+			boolean propsHead = propertiesText(sheetID, spreadsheet_id, propertiesText, positionText);
+			log.info(propsHead == true ? "Se actualizó correctamente el encabezado" : "No se pudo actualizar correctamente el encabezado");
+			Thread.sleep(500);
+			
+	        //####--2.1 --Título
+	        valuesItems = new ArrayList<List<Object>>();
+	        valItem = new ArrayList<Object>();
+			valItem.add(element.getTitle());
+			valuesItems.add(valItem);
+			NumRow++;
+			srow = sheetName + "!" + utilities.numToLetter(NumColumn) + NumRow;
+			updateAndReplaceData(valuesItems, srow, spreadsheet_id);
+			propertiesText = fillObjectPropsTxt(false, "black", "Poppins", 32, "LEFTH");
+			positionText = fillObjectPosText(0,11,1,2);
+			boolean propsTitle = propertiesText(sheetID, spreadsheet_id, propertiesText, positionText);
+			boolean mixcell = mixCells(sheetID, spreadsheet_id,positionText);
+			boolean wapTitle = wrapText(sheetID, spreadsheet_id, positionText);
+			Thread.sleep(500);
+			
+			//########################################################################
+			//##############___ 2.2 Inserción de personas alcanzadas ___##############
+	        //####--2.2.1 --Título
+	        valuesItems = new ArrayList<List<Object>>();
+	        valItem = new ArrayList<Object>();
+			valItem.add("Potencial de personas alcanzadas");
+			valuesItems.add(valItem);
+			NumRow+=2;
+			srow = sheetName + "!" + utilities.numToLetter(NumColumn) + NumRow;
+			updateAndReplaceData(valuesItems, srow, spreadsheet_id);
+			propertiesText = fillObjectPropsTxt(false, "darkblue", "Poppins", 20, "LEFTH");
+			positionText = fillObjectPosText(0,5,3,4);
+			boolean propsTitlePA = propertiesText(sheetID, spreadsheet_id, propertiesText, positionText);
+			boolean mixcellPA = mixCells(sheetID, spreadsheet_id,positionText);
+			Thread.sleep(500);
+			
+			//####--2.2.2 --Periodo de medición
+	        valuesItems = new ArrayList<List<Object>>();
+	        valItem = new ArrayList<Object>();
+			valItem.add("Periodo de medición: 29 al 30 de abril de 2024");
+			valuesItems.add(valItem);
+			NumRow++;
+			srow = sheetName + "!" + utilities.numToLetter(NumColumn) + NumRow;
+			updateAndReplaceData(valuesItems, srow, spreadsheet_id);
+			propertiesText = fillObjectPropsTxt(false, "black", "Montserrat", 12, "LEFTH");
+			positionText = fillObjectPosText(0,5,4,5);
+			boolean propsTitlePM = propertiesText(sheetID, spreadsheet_id, propertiesText, positionText);
+			boolean colorCellPM = colorCells(sheetID, spreadsheet_id, positionText, "verdeClaro");
+			Thread.sleep(500);
+			
+			//####--2.2.3 --Periodo de medición(Números X, Menciones, Facebook)
+			//--Imágenes
+			positionText = fillObjectPosText(0,1,6,8);
+			boolean mixcellPM_IM1 = mixCells(sheetID, spreadsheet_id,positionText);
+			positionText = fillObjectPosText(4,5,6,8);
+			boolean mixcellPM_IM2 = mixCells(sheetID, spreadsheet_id,positionText);
+			positionText = fillObjectPosText(8,9,6,8);
+			boolean mixcellPM_IM3 = mixCells(sheetID, spreadsheet_id,positionText);
+			Thread.sleep(500);
+			
+			//--Títulos
+	        valuesItems = new ArrayList<List<Object>>();
+	        valItem = new ArrayList<Object>();
+			valItem.add("Alcance Potencial en X y Facebook");
+			valuesItems.add(valItem);
+			NumRow+=2;
+			NumColumn++;
+			srow = sheetName + "!" + utilities.numToLetter(NumColumn) + NumRow;
+			updateAndReplaceData(valuesItems, srow, spreadsheet_id);
+			propertiesText = fillObjectPropsTxt(false, "grey", "Montserrat", 9, "LEFTH");
+			positionText = fillObjectPosText(1,3,6,7);
+			boolean propsTitlePM1 = propertiesText(sheetID, spreadsheet_id, propertiesText, positionText);
+			
+	        valuesItems = new ArrayList<List<Object>>();
+	        valItem = new ArrayList<Object>();
+			valItem.add("Menciones en X:");
+			valuesItems.add(valItem);
+			NumColumn+=4;
+			srow = sheetName + "!" + utilities.numToLetter(NumColumn) + NumRow;
+			updateAndReplaceData(valuesItems, srow, spreadsheet_id);
+			positionText = fillObjectPosText(5,6,6,7);
+			boolean propsTitlePM2 = propertiesText(sheetID, spreadsheet_id, propertiesText, positionText);
+			
+	        valuesItems = new ArrayList<List<Object>>();
+	        valItem = new ArrayList<Object>();
+			valItem.add("Post en Facebook");
+			valuesItems.add(valItem);
+			NumColumn=10;
+			srow = sheetName + "!" + utilities.numToLetter(NumColumn) + NumRow;
+			updateAndReplaceData(valuesItems, srow, spreadsheet_id);
+			positionText = fillObjectPosText(9,10,6,7);
+			boolean propsTitlePM3 = propertiesText(sheetID, spreadsheet_id, propertiesText, positionText);
+			Thread.sleep(500);
+			
+			//--Números
+	        valuesItems = new ArrayList<List<Object>>();
+	        valItem = new ArrayList<Object>();
+			valItem.add("2,583,026");
+			valuesItems.add(valItem);
+			NumRow++;
+			NumColumn=2;
+			srow = sheetName + "!" + utilities.numToLetter(NumColumn) + NumRow;
+			updateAndReplaceData(valuesItems, srow, spreadsheet_id);
+			propertiesText = fillObjectPropsTxt(true, "aqua", "Montserrat", 28, "RIGHT");
+			positionText = fillObjectPosText(1,2,7,8);
+			boolean propsNum1 = propertiesText(sheetID, spreadsheet_id, propertiesText, positionText);
+			positionText = fillObjectPosText(1,3,7,8);
+			boolean mixcellPM_Num1 = mixCells(sheetID, spreadsheet_id,positionText);
+
+	        valuesItems = new ArrayList<List<Object>>();
+	        valItem = new ArrayList<Object>();
+			valItem.add("55,024");
+			valuesItems.add(valItem);
+			NumColumn=6;
+			srow = sheetName + "!" + utilities.numToLetter(NumColumn) + NumRow;
+			updateAndReplaceData(valuesItems, srow, spreadsheet_id);
+			positionText = fillObjectPosText(5,6,7,8);
+			boolean propsNum2 = propertiesText(sheetID, spreadsheet_id, propertiesText, positionText);
+			positionText = fillObjectPosText(5,7,7,8);
+			boolean mixcellPM_Num2 = mixCells(sheetID, spreadsheet_id,positionText);
+			
+	        valuesItems = new ArrayList<List<Object>>();
+	        valItem = new ArrayList<Object>();
+			valItem.add("86,107");
+			valuesItems.add(valItem);
+			NumColumn=10;
+			srow = sheetName + "!" + utilities.numToLetter(NumColumn) + NumRow;
+			updateAndReplaceData(valuesItems, srow, spreadsheet_id);
+			positionText = fillObjectPosText(9,10,7,8);
+			boolean propsNum3 = propertiesText(sheetID, spreadsheet_id, propertiesText, positionText);
+			positionText = fillObjectPosText(9,11,7,8);
+			boolean mixcellPM_Num3 = mixCells(sheetID, spreadsheet_id,positionText);
+			Thread.sleep(500);
+			
+	        valuesItems = new ArrayList<List<Object>>();
+	        valItem = new ArrayList<Object>();
+			valItem.add("Existe un 5% con relación al tema");
+			valuesItems.add(valItem);
+			NumColumn=5;
+			NumRow++;
+			srow = sheetName + "!" + utilities.numToLetter(NumColumn) + NumRow;
+			updateAndReplaceData(valuesItems, srow, spreadsheet_id);
+			propertiesText = fillObjectPropsTxt(false, "black", "Montserrat", 10, "CENTER");
+			positionText = fillObjectPosText(4,7,8,10);
+			boolean propsItmPM_ = propertiesText(sheetID, spreadsheet_id, propertiesText, positionText);
+			boolean mixcellItmPM_ = mixCells(sheetID, spreadsheet_id,positionText);
+			boolean colorCellItmPM = colorCells(sheetID, spreadsheet_id, positionText, "verdeClaro");
+			Thread.sleep(500);
+			
+			//##############___ 2.3 Inserción de Actores destacados ___##############
+	        valuesItems = new ArrayList<List<Object>>();
+	        valItem = new ArrayList<Object>();
+			valItem.add("Actores destacados");
+			valuesItems.add(valItem);
+			NumColumn=1;
+			NumRow=12;
+			srow = sheetName + "!" + utilities.numToLetter(NumColumn) + NumRow;
+			updateAndReplaceData(valuesItems, srow, spreadsheet_id);
+			propertiesText = fillObjectPropsTxt(false, "darkblue", "Poppins", 20, "LEFTH");
+			positionText = fillObjectPosText(0,3,11,12);
+			boolean propsItmAD_ = propertiesText(sheetID, spreadsheet_id, propertiesText, positionText);
+			Thread.sleep(500);
+			
+	        valuesItems = new ArrayList<List<Object>>();
+	        valItem = new ArrayList<Object>();
+			valItem.add("Han compartido información sobre el tema");
+			valuesItems.add(valItem);
+			NumRow++;
+			srow = sheetName + "!" + utilities.numToLetter(NumColumn) + NumRow;
+			updateAndReplaceData(valuesItems, srow, spreadsheet_id);
+			propertiesText = fillObjectPropsTxt(false, "black", "Montserrat", 12, "LEFTH");
+			positionText = fillObjectPosText(0,1,12,13);
+			boolean propsItmAD_2 = propertiesText(sheetID, spreadsheet_id, propertiesText, positionText);
+			Thread.sleep(500);
+			
+	        valuesItems = new ArrayList<List<Object>>();
+	        valItem = new ArrayList<Object>();
+	        StringBuilder sb = new StringBuilder();
+	        for (int i = 0; i < element.getStakeholders().size(); i++) {
+	            sb.append(element.getStakeholders().get(i));
+	            if (i < element.getStakeholders().size() - 1) {
+	                sb.append(", ");
+	            }
+	        }
+			valItem.add(sb.toString());
+			valuesItems.add(valItem);
+			NumRow++;
+			srow = sheetName + "!" + utilities.numToLetter(NumColumn) + NumRow;
+			updateAndReplaceData(valuesItems, srow, spreadsheet_id);
+			propertiesText = fillObjectPropsTxt(false, "grey", "Montserrat", 9, "LEFTH");
+			positionText = fillObjectPosText(0,1,13,14);
+			boolean propsItmAD_SH = propertiesText(sheetID, spreadsheet_id, propertiesText, positionText);
+			Thread.sleep(500);
+			
+			//##############___ 2.4 Inserción de Percepción ___##############
+	        valuesItems = new ArrayList<List<Object>>();
+	        valItem = new ArrayList<Object>();
+			valItem.add("Percepción");
+			valuesItems.add(valItem);
+			NumColumn=1;
+			NumRow=21;
+			srow = sheetName + "!" + utilities.numToLetter(NumColumn) + NumRow;
+			updateAndReplaceData(valuesItems, srow, spreadsheet_id);
+			propertiesText = fillObjectPropsTxt(false, "darkblue", "Poppins", 20, "LEFTH");
+			positionText = fillObjectPosText(0,1,20,21);
+			boolean propsItmIP_ = propertiesText(sheetID, spreadsheet_id, propertiesText, positionText);
+			Thread.sleep(500);
+			
+			//##############___ 2.5 Inserción de Líneas de conversación ___##############
+			//###-- 2.5.1-Título
+	        valuesItems = new ArrayList<List<Object>>();
+	        valItem = new ArrayList<Object>();
+			valItem.add("Líneas de conversación");
+			valuesItems.add(valItem);
+			NumColumn=1;
+			NumRow=37;
+			srow = sheetName + "!" + utilities.numToLetter(NumColumn) + NumRow;
+			updateAndReplaceData(valuesItems, srow, spreadsheet_id);
+			propertiesText = fillObjectPropsTxt(false, "darkblue", "Poppins", 20, "LEFTH");
+			positionText = fillObjectPosText(0,1,36,37);
+			boolean propsItmLC_T = propertiesText(sheetID, spreadsheet_id, propertiesText, positionText);
+			Thread.sleep(500);
+			
+			//###-- 2.5.2-Líneas
+			for (String line : element.getLines()) {
+		        valuesItems = new ArrayList<List<Object>>();
+		        valItem = new ArrayList<Object>();
+				valItem.add("● " + line);
+				valuesItems.add(valItem);
+				NumRow+=2;
+				srow = sheetName + "!" + utilities.numToLetter(NumColumn) + NumRow;
+				updateAndReplaceData(valuesItems, srow, spreadsheet_id);
+				propertiesText = fillObjectPropsTxt(false, "black", "Montserrat", 10, "LEFTH");
+				positionText = fillObjectPosText(0,1,NumRow-1,NumRow);
+				boolean propsItmLC_1 = propertiesText(sheetID, spreadsheet_id, propertiesText, positionText);
+				positionText = fillObjectPosText(0,11,NumRow-1,NumRow);
+				boolean mixcellLC_Num1 = mixCells(sheetID, spreadsheet_id,positionText);
+				boolean wapTitleLC = wrapText(sheetID, spreadsheet_id, positionText);
+				Thread.sleep(500);
+			}
+			
+			//###-- 2.5.1-Título
+	        valuesItems = new ArrayList<List<Object>>();
+	        valItem = new ArrayList<Object>();
+			valItem.add("Fuente: Facebook y X analizados por https://www.perceptionkeys.com La información contenida en este documento es confidencial y únicamente para uso interno");
+			valuesItems.add(valItem);
+			NumColumn=1;
+			NumRow=45;
+			srow = sheetName + "!" + utilities.numToLetter(NumColumn) + NumRow;
+			updateAndReplaceData(valuesItems, srow, spreadsheet_id);
+			propertiesText = fillObjectPropsTxt(false, "grey", "Montserrat", 8, "LEFTH");
+			positionText = fillObjectPosText(0,1,44,45);
+			propertiesText(sheetID, spreadsheet_id, propertiesText, positionText);
+			Thread.sleep(500);
+			System.out.println("");
+			
+			
+
+			
+		} catch (Exception ex) {
+			log.error("Problemas al generar la hoja de VISUAL");
+			log.error(ex);
+		}
+	}
+	
+	public boolean propertiesText(Integer sheetID, String spreadsheet_id, propertiesTextSheet propsTxt, positionCellSheet position) {
+		try {
+			//##--COLORES--##
+			//aqua = #0097a7
+			//gris = #858aa7
+			//negro = #000000
+			//darkblue = #00436a
+			float red = 0.0f;
+			float green = 0.0f;
+			float blue = 0.0f;
+			switch (propsTxt.getColor()) {
+			case "aqua":
+				green = 0.592f;
+				blue = 0.655f;
+				break;
+			case "grey":
+				red = 0.521f;
+				green = 0.541f;
+				blue = 0.655f;
+				break;
+			case "darkblue":
+				green = 0.262f;
+				blue = 0.416f;
+				break;
+			default:
+				break;
+			}
+			
+			Sheets service = getServiceSheet();
+	        CellFormat cellFormat = new CellFormat()
+	                .setTextFormat(new TextFormat()
+	                        .setFontFamily(propsTxt.getFontName())
+	                        .setFontSize(propsTxt.getFontSize())
+	                        .setBold(propsTxt.isBold())
+	                        .setForegroundColor((new Color()
+	                        		.setRed(red)
+	                        		.setGreen(green)
+	                        		.setBlue(blue))
+	                        		));
+	        GridRange gridRange = new GridRange()
+	                .setSheetId(sheetID)
+	                .setStartRowIndex(position.getStartRow())
+	                .setEndRowIndex(position.getEndRow())
+	                .setStartColumnIndex(position.getStartColumn())
+	                .setEndColumnIndex(position.getEndColumn());
+	        Request formatRequest = new Request()
+	                .setRepeatCell(new RepeatCellRequest()
+	                        .setRange(gridRange)
+	                        .setCell(new CellData().setUserEnteredFormat(cellFormat))
+	                        .setFields("userEnteredFormat.textFormat"));
+
+	        BatchUpdateSpreadsheetRequest batchUpdateRequest = new BatchUpdateSpreadsheetRequest()
+	                .setRequests(Collections.singletonList(formatRequest));
+
+	        service.spreadsheets().batchUpdate(spreadsheet_id, batchUpdateRequest).execute();
+	        
+	        if(!propsTxt.getAlign().equals("none")) {
+	            CellFormat cellFormatAlign = new CellFormat()
+	                    .setWrapStrategy("WRAP")
+	                    .setHorizontalAlignment(propsTxt.getAlign());
+	            Request wrapTextAndAlignRequest = new Request()
+	                    .setRepeatCell(new RepeatCellRequest()
+	                            .setRange(gridRange)
+	                            .setCell(new CellData().setUserEnteredFormat(cellFormatAlign))
+	                            .setFields("userEnteredFormat.wrapStrategy,userEnteredFormat.horizontalAlignment"));
+		        BatchUpdateSpreadsheetRequest batchUpdateRequestAl = new BatchUpdateSpreadsheetRequest()
+		                .setRequests(Collections.singletonList(wrapTextAndAlignRequest));
+
+		        service.spreadsheets().batchUpdate(spreadsheet_id, batchUpdateRequestAl).execute();
+	        }
+	        
+	        
+	        return true;
+		} catch (Exception ex) {
+			log.error(ex);
+			log.error("#####__PROBLEMAS AL AGREGAR LAS PROPIEDADES EN EL ARCHIVO: " + spreadsheet_id);
+			return false;
+		}
+	}
+	
+	public boolean mixCells(Integer sheetID, String spreadsheet_id, positionCellSheet position){
+		try {
+			Sheets service = getServiceSheet();
+			
+	        GridRange gridRangeMerge = new GridRange()
+	                .setSheetId(sheetID)
+	                .setStartRowIndex(position.getStartRow())
+	                .setEndRowIndex(position.getEndRow())
+	                .setStartColumnIndex(position.getStartColumn())
+	                .setEndColumnIndex(position.getEndColumn());
+
+	        // Crear la solicitud de combinación de celdas
+	        Request mergeCellsRequest = new Request()
+	                .setMergeCells(new MergeCellsRequest()
+	                        .setRange(gridRangeMerge)
+	                        .setMergeType("MERGE_ALL"));
+
+	        BatchUpdateSpreadsheetRequest batchUpdateRequestMerge = new BatchUpdateSpreadsheetRequest()
+	                .setRequests(Collections.singletonList(mergeCellsRequest));
+
+	        BatchUpdateSpreadsheetResponse response = service.spreadsheets()
+	                .batchUpdate(spreadsheet_id, batchUpdateRequestMerge)
+	                .execute();
+	        System.out.println("");
+	        return true;
+		} catch (Exception e) {
+			log.info(e.getMessage());
+			log.error("####---PROBLEMAS AL COMBINAR LAS CELDAS DEL ARCHIVO: " + spreadsheet_id);
+			return false;
+		}
+	}
+
+	public boolean wrapText(Integer sheetID, String spreadsheet_id, positionCellSheet position) {
+		try {
+			Sheets service = getServiceSheet();
+	        GridRange gridRange = new GridRange()
+	                .setSheetId(sheetID)
+	                .setStartRowIndex(position.getStartRow())
+	                .setEndRowIndex(position.getEndRow())
+	                .setStartColumnIndex(position.getStartColumn())
+	                .setEndColumnIndex(position.getEndColumn());
+	        CellFormat cellFormat = new CellFormat()
+	                .setWrapStrategy("WRAP");
+	        Request wrapTextRequest = new Request()
+	                .setRepeatCell(new RepeatCellRequest()
+	                        .setRange(gridRange)
+	                        .setCell(new CellData().setUserEnteredFormat(cellFormat))
+	                        .setFields("userEnteredFormat.wrapStrategy"));
+			
+	        BatchUpdateSpreadsheetRequest batchUpdateRequest = new BatchUpdateSpreadsheetRequest()
+	                .setRequests(Collections.singletonList(wrapTextRequest));
+	        BatchUpdateSpreadsheetResponse response = service.spreadsheets()
+	                .batchUpdate(spreadsheet_id, batchUpdateRequest)
+	                .execute();
+	        System.out.println("");
+	        return true;
+		} catch (Exception ex) {
+			log.error(ex.getMessage());
+			log.error("############---PROBLEMAS AL HACER EL WRAP EN EL DOCUMENTO: " + spreadsheet_id);
+			return false;
+		}
+	}
+	
+	public boolean colorCells(Integer sheetID, String spreadsheet_id, positionCellSheet position, String color) {
+		try {
+			//##--COLORES--##
+			//verdeClaro = #f1f7f2
+			float red = 0.0f;
+			float green = 0.0f;
+			float blue = 0.0f;
+			switch (color) {
+			case "verdeClaro":
+				red = 0.945f;
+				green = 0.966f;
+				blue = 0.949f;
+				break;
+			default:
+				break;
+			}
+			
+			
+			
+			Sheets service = getServiceSheet();
+	        CellFormat cellFormatColor = new CellFormat()
+	                .setBackgroundColor(new Color()
+		                    .setRed(red)
+		                    .setGreen(green)
+		                    .setBlue(blue));
+		                    //.setAlpha(0.5f));
+	        GridRange gridRangeColor = new GridRange()
+	                .setSheetId(sheetID)
+	                .setStartRowIndex(position.getStartRow())
+	                .setEndRowIndex(position.getEndRow())
+	                .setStartColumnIndex(position.getStartColumn())
+	                .setEndColumnIndex(position.getEndColumn());
+	        Request formatRequestColor = new Request()
+	                .setRepeatCell(new RepeatCellRequest()
+	                        .setRange(gridRangeColor)
+	                        .setCell(new CellData().setUserEnteredFormat(cellFormatColor))
+	                        .setFields("userEnteredFormat.backgroundColor"));
+	        
+	        
+	        BatchUpdateSpreadsheetRequest batchUpdateRequestColor = new BatchUpdateSpreadsheetRequest()
+	                .setRequests(Collections.singletonList(formatRequestColor));
+
+	        service.spreadsheets().batchUpdate(spreadsheet_id, batchUpdateRequestColor).execute();
+			return true;
+		} catch (Exception ex) {
+			log.error(ex.getMessage());
+			log.error("#######_PROBLEMAS AL AGREGAR EL COLOR A LAS CELDAS EN EL ARCHIVO: " + spreadsheet_id);
+			return false;
+		}
+	}
+	
+	private propertiesTextSheet fillObjectPropsTxt(boolean bold, String color, String fontName, Integer fontSize, String align) {
+		propertiesTextSheet props = new propertiesTextSheet();
+		try {
+			props.setBold(bold);
+			props.setColor(color);
+			props.setFontName(fontName);
+			props.setFontSize(fontSize);
+			props.setAlign(align);
+			return props;
+		} catch (Exception ex) {
+			return props;
+		}
+	}
+	
+	private positionCellSheet fillObjectPosText(Integer startCol, Integer endCol, Integer startRow, Integer endRow) {
+		positionCellSheet position = new positionCellSheet();
+		try {
+			position.setStartColumn(startCol);
+			position.setEndColumn(endCol);
+			position.setStartRow(startRow);
+			position.setEndRow(endRow);
+			return position;
+		} catch (Exception ex) {
+			return position;
+		}
+	}
+	
+ 	public AIResponse test(TestRequest request) {
+		AIResponse res = new AIResponse();
 		//############################################################
 		//###############__PRUEBAS DE SERVICIO GOOGLE-SHEETS__########
 		//############################################################
-		List<JSONMalta> res = new ArrayList<JSONMalta>();
-		Sheets service = getServiceSheet();
-		String sheetID="1Iw7dz6Q-mC0vlTbrNY39_KST5gd_CF3_1MK_zOHZivY";
-		String sheetName="productos";
-		String charsToRetain = "0123456789";
-		Integer numProduct = 0;
 		try {
-	        //##########GetData Sheet
-			SheetResponse restGet = getDataSheetByFilter("COLUMNS", sheetID, sheetName);
-			SheetResponse restGetRaw = getDataSheetByFilter("RAW", sheetID, sheetName);
-			for ( List<Object> product : restGetRaw.objectResult) {
-				numProduct++;
-				JSONMalta itemProd = new JSONMalta();
-				JSONMaltaID idProd = new JSONMaltaID();
-				List<Integer> wg = new ArrayList<Integer>();
-				List<String> PDA = new ArrayList<String>();
-				List<String> PT = new ArrayList<String>();
-				List<String> imageP = new ArrayList<String>();
-				List<String> images = new ArrayList<String>();
-				List<String> featured = new ArrayList<String>();
-				JSONMaltaDate stDate =  new JSONMaltaDate();
-				JSONMaltaDate enDate = new JSONMaltaDate();
-				JSONMaltaMeta metaD = new JSONMaltaMeta();
-				if (!product.get(0).toString().startsWith("item_number")) {
-					//###-------_id-------###
-					if (product.get(2).toString().startsWith("n/d")) 
-						idProd.set$oid("");
-					else
-						idProd.set$oid(product.get(2).toString());
-					itemProd.set_id(idProd);
-					
-					//###-------weight-------###
-					if (!product.get(3).toString().isEmpty() && !product.get(3).toString().startsWith("n/d")) 
-						wg.add(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(product.get(3).toString())));
-					if (!product.get(4).toString().isEmpty() && !product.get(4).toString().startsWith("n/d")) 
-						wg.add(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(product.get(4).toString())));
-					itemProd.setWeight(wg);
-					
-					//###-------possible_drugs_added-------###
-					if (!product.get(7).toString().isEmpty() && !product.get(7).toString().startsWith("n/d"))
-						PDA.add(product.get(7).toString());
-					if (!product.get(8).toString().isEmpty() && !product.get(8).toString().startsWith("n/d"))
-						PDA.add(product.get(8).toString());
-					if (!product.get(9).toString().isEmpty() && !product.get(9).toString().startsWith("n/d"))
-						PDA.add(product.get(9).toString());
-					if (!product.get(10).toString().isEmpty() && !product.get(10).toString().startsWith("n/d"))
-						PDA.add(product.get(10).toString());
-					if (!product.get(11).toString().isEmpty() && !product.get(11).toString().startsWith("n/d"))
-						PDA.add(product.get(11).toString());
-					if (!product.get(12).toString().isEmpty() && !product.get(12).toString().startsWith("n/d"))
-						PDA.add(product.get(12).toString());
-					if (!product.get(13).toString().isEmpty() && !product.get(13).toString().startsWith("n/d"))
-						PDA.add(product.get(13).toString());
-					if (!product.get(14).toString().isEmpty() && !product.get(14).toString().startsWith("n/d"))
-						PDA.add(product.get(14).toString());
-					if (!product.get(15).toString().isEmpty() && !product.get(15).toString().startsWith("n/d"))
-						PDA.add(product.get(15).toString());
-					if (!product.get(16).toString().isEmpty() && !product.get(16).toString().startsWith("n/d"))
-						PDA.add(product.get(16).toString());
-					if (!product.get(17).toString().isEmpty() && !product.get(17).toString().startsWith("n/d"))
-						PDA.add(product.get(17).toString());
-					if (!product.get(18).toString().isEmpty() && !product.get(18).toString().startsWith("n/d"))
-						PDA.add(product.get(18).toString());
-					itemProd.setPossible_drugs_added(PDA);
-					
-					//###-------particle_types-------###
-					if (!product.get(6).toString().isEmpty() && !product.get(6).toString().startsWith("n/d"))
-						PT.add(product.get(6).toString());
-					if (!product.get(19).toString().isEmpty() && !product.get(19).toString().startsWith("n/d"))
-						PT.add(product.get(19).toString());
-					if (!product.get(20).toString().isEmpty() && !product.get(20).toString().startsWith("n/d"))
-						PT.add(product.get(20).toString());
-					itemProd.setParticle_types(PT);
-					
-					//###-------images_particle-------###
-					if (!product.get(21).toString().isEmpty() && !product.get(21).toString().startsWith("n/d"))
-						imageP.add(product.get(21).toString());
-					if (!product.get(22).toString().isEmpty() && !product.get(22).toString().startsWith("n/d"))
-						imageP.add(product.get(22).toString());
-					itemProd.setImages_particle(imageP);
-					
-					//###-------images-------###
-					if (!product.get(23).toString().isEmpty() && !product.get(23).toString().startsWith("n/d"))
-						images.add(product.get(23).toString());
-					if (!product.get(24).toString().isEmpty() && !product.get(24).toString().startsWith("n/d"))
-						images.add(product.get(24).toString());
-					itemProd.setImages(images);
-					
-					//###-------featured_in-------###
-					if (!product.get(25).toString().isEmpty() && !product.get(25).toString().startsWith("n/d"))
-						featured.add(product.get(25).toString());
-					itemProd.setFeatured_in(featured);
-					
-					//###-------item_number-------###
-					if (!product.get(0).toString().isEmpty() && !product.get(0).toString().startsWith("n/d"))
-						itemProd.setItem_number(product.get(0).toString());
-					
-					//###-------item_name-------###
-					if (!product.get(1).toString().isEmpty() && !product.get(1).toString().startsWith("n/d"))
-						itemProd.setItem_name(product.get(1).toString());
-					
-					//###-------item_description-------###
-					if (!product.get(26).toString().isEmpty() && !product.get(26).toString().startsWith("n/d"))
-						itemProd.setItem_description(product.get(26).toString());
-					
-					//###-------long_description-------###
-					if (!product.get(27).toString().isEmpty() && !product.get(27).toString().startsWith("n/d"))
-						itemProd.setLong_description(product.get(27).toString());
-					
-					//###-------item_shortname-------###
-					if (!product.get(28).toString().isEmpty() && !product.get(28).toString().startsWith("n/d"))
-						itemProd.setItem_shortname(product.get(28).toString());
-					
-					//###-------brand_code-------###
-					if (!product.get(29).toString().isEmpty() && !product.get(29).toString().startsWith("n/d"))
-						itemProd.setBrand_code(product.get(29).toString());
-					
-					//###-------division_code-------###
-					if (!product.get(30).toString().isEmpty() && !product.get(30).toString().startsWith("n/d"))
-						itemProd.setDivision_code(product.get(30).toString());
-					
-					//###-------subdivision-------###
-					if (!product.get(31).toString().isEmpty() && !product.get(31).toString().startsWith("n/d"))
-						itemProd.setSubdivision(product.get(31).toString());
-					
-					//###-------price_cathegory-------###
-					if (!product.get(32).toString().isEmpty() && !product.get(32).toString().startsWith("n/d"))
-						itemProd.setPrice_cathegory(product.get(32).toString());
-					
-					//###-------sub_brand-------###
-					if (!product.get(33).toString().isEmpty() && !product.get(33).toString().startsWith("n/d"))
-						itemProd.setSub_brand(product.get(33).toString());
+			createFile();
+			generateSheetVisual(request.getSpreadsheet_id(), request.getSheet_name(), request.getItem());
+			
+			System.out.println("");
+			Sheets service = getServiceSheet();
+			String valueInputOption = "RAW";
+			String Range = request.getSheet_name() + "!C8";
+			
+			List<List<Object>> valuesItems = new ArrayList<List<Object>>();
+			List<Object> valItem = new ArrayList<Object>();
+			valItem.add(request.getMessage());
+			valuesItems.add(valItem);
+			
+	        ValueRange body = new ValueRange()
+	                .setValues(valuesItems);
+	        UpdateValuesResponse result = service.spreadsheets().values()
+	                .update(request.getSpreadsheet_id(), Range, body)
+	                .setValueInputOption("RAW")
+	                .execute();
+			
+	        Integer sheetID = getIdFromSheet(request.getSpreadsheet_id(), request.getSheet_name());
+	        
+	        
+	        // Aplica formato DE FUENTE y TAMAÑO a la celda o rango de celdas
+	        CellFormat cellFormat = new CellFormat()
+	                .setTextFormat(new TextFormat()
+	                        .setFontFamily("Arial")
+	                        .setFontSize(14)
+	                        .setBold(true));
+	        GridRange gridRange = new GridRange()
+	                .setSheetId(sheetID) // ID de la hoja, generalmente 0 para la primera hoja
+	                .setStartRowIndex(7)  // Índice 7 para la fila 8 (índice basado en 0) ######__INICIO_DE_FILA
+	                .setEndRowIndex(8)    // Índice 8 para finalizar justo después de la fila 8 ######__FIN_DE_FILA
+	                .setStartColumnIndex(2) // Índice 2 para la columna C (índice basado en 0) ######__INICIO_DE_COLUMNA
+	                .setEndColumnIndex(3); //######__FIN_DE_COLUMNA
+	        Request formatRequest = new Request()
+	                .setRepeatCell(new RepeatCellRequest()
+	                        .setRange(gridRange)
+	                        .setCell(new CellData().setUserEnteredFormat(cellFormat))
+	                        .setFields("userEnteredFormat.textFormat"));
 
-					//###-------cathegory_inventory-------###
-					if (!product.get(34).toString().isEmpty() && !product.get(34).toString().startsWith("n/d"))
-						itemProd.setCathegory_inventory(product.get(34).toString());
-					
-					//###-------stage-------###
-					if (!product.get(35).toString().isEmpty() && !product.get(35).toString().startsWith("n/d"))
-						itemProd.setStage(product.get(35).toString());
-					
-					//###-------item_status-------###
-					if (!product.get(36).toString().isEmpty() && !product.get(36).toString().startsWith("n/d"))
-						itemProd.setItem_status(product.get(36).toString());
-					
-					//###-------sales_product_type_code-------###
-					if (!product.get(37).toString().isEmpty() && !product.get(37).toString().startsWith("n/d"))
-						itemProd.setSales_product_type_code(product.get(37).toString());
-					
-					//###-------technology_code-------###
-					if (!product.get(38).toString().isEmpty() && !product.get(38).toString().startsWith("n/d"))
-						itemProd.setTechnology_code(product.get(38).toString());
-					
-					//###-------protein-------###
-					if (!product.get(39).toString().isEmpty() && !product.get(39).toString().startsWith("n/d"))
-						itemProd.setProtein(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(product.get(39).toString())));
-					
-					//###-------fat-------###
-					if (!product.get(40).toString().isEmpty() && !product.get(40).toString().startsWith("n/d"))
-						itemProd.setFat(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(product.get(40).toString())));
-					
-					//###-------humidity-------###
-					if (!product.get(42).toString().isEmpty() && !product.get(42).toString().startsWith("n/d"))
-						itemProd.setHumidity(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(product.get(42).toString())));
-					
-					//###-------benefits-------###
-					if (!product.get(45).toString().isEmpty() && !product.get(45).toString().startsWith("n/d"))
-						itemProd.setBenefits(product.get(45).toString());
-					
-					//###-------fiber-------###
-					if (!product.get(41).toString().isEmpty() && !product.get(41).toString().startsWith("n/d"))
-						itemProd.setFiber(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(product.get(41).toString())));
-					
-					//###-------ashes-------###
-					if (!product.get(43).toString().isEmpty() && !product.get(43).toString().startsWith("n/d"))
-						itemProd.setAshes(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(product.get(43).toString())));
-					
-					//###-------eln-------###
-					if (!product.get(46).toString().isEmpty() && !product.get(46).toString().startsWith("n/d"))
-						itemProd.setEln(Integer.parseInt(CharMatcher.anyOf(charsToRetain).retainFrom(product.get(46).toString())));
-					
-					//###-------particle-------###
-					if (!product.get(47).toString().isEmpty() && !product.get(47).toString().startsWith("n/d"))
-						itemProd.setParticle(product.get(47).toString());
-					
-					//###-------createdAt-------###
-					stDate.$date = "2020-10-13T22:40:07.917+0000";
-					itemProd.setCreatedAt(stDate);
-					
-					//###-------updatedAt-------###
-					enDate.$date = "2023-01-27T22:40:07.917+0000";
-					itemProd.setUpdatedAt(enDate);
-					
-					//###-------active-------###
-					if (!product.get(53).toString().isEmpty() && !product.get(53).toString().startsWith("n/d"))
-						itemProd.setActive(true);
-					
-					//###-------metadata-------###
-					if (!product.get(5).toString().isEmpty() && !product.get(5).toString().startsWith("n/d"))
-						metaD.setSader(product.get(5).toString());
-					itemProd.setMetadata(metaD);
-					
-					//##AGREGAR OBJETO AL ARREGLO
-					res.add(itemProd);
-				}
-			}
-			return result;
+	        BatchUpdateSpreadsheetRequest batchUpdateRequest = new BatchUpdateSpreadsheetRequest()
+	                .setRequests(Collections.singletonList(formatRequest));
+
+	        service.spreadsheets().batchUpdate(request.getSpreadsheet_id(), batchUpdateRequest).execute();
+	        System.out.println("");
+
+
+	     // Aplica formato COLOR DE FONDO a la celda o rango de celdas
+	        CellFormat cellFormatColor = new CellFormat()
+	                .setBackgroundColor(new Color()
+		                    .setRed(1.0f)   // Valor del rojo (0.0 a 1.0)
+		                    .setGreen(1.0f) // Valor del verde (0.0 a 1.0)
+		                    .setBlue(0.0f)  // Valor del azul (0.0 a 1.0)
+		                    .setAlpha(0.5f)); // Transparencia (0.0 a 1.0)
+	        GridRange gridRangeColor = new GridRange()
+	                .setSheetId(sheetID) // ID de la hoja, generalmente 0 para la primera hoja
+	                .setStartRowIndex(7)  // Índice 7 para la fila 8 (índice basado en 0) ######__INICIO_DE_FILA
+	                .setEndRowIndex(8)    // Índice 8 para finalizar justo después de la fila 8 ######__FIN_DE_FILA
+	                .setStartColumnIndex(2) // Índice 2 para la columna C (índice basado en 0) ######__INICIO_DE_COLUMNA
+	                .setEndColumnIndex(3); //######__FIN_DE_COLUMNA
+	        Request formatRequestColor = new Request()
+	                .setRepeatCell(new RepeatCellRequest()
+	                        .setRange(gridRangeColor)
+	                        .setCell(new CellData().setUserEnteredFormat(cellFormatColor))
+	                        .setFields("userEnteredFormat.backgroundColor"));
+	        
+	        
+	        BatchUpdateSpreadsheetRequest batchUpdateRequestColor = new BatchUpdateSpreadsheetRequest()
+	                .setRequests(Collections.singletonList(formatRequestColor));
+
+	        service.spreadsheets().batchUpdate(request.getSpreadsheet_id(), batchUpdateRequestColor).execute();
+	        System.out.println("");
+	        
+	        
+	        //Aplica formato PARA COMBINAR RANGO DE CELDAS
+	        GridRange gridRangeMerge = new GridRange()
+	                .setSheetId(sheetID) // ID de la hoja, generalmente 0 para la primera hoja
+	                .setStartRowIndex(4) // Índice 4 para la fila 5 (basado en 0)
+	                .setEndRowIndex(12)  // Índice 12 para la fila 13, terminando justo después de la fila 12
+	                .setStartColumnIndex(2) // Índice 2 para la columna C (basado en 0)
+	                .setEndColumnIndex(6);  // Índice 3 para la columna D, terminando justo después de la columna C
+
+	        // Crear la solicitud de combinación de celdas
+	        Request mergeCellsRequest = new Request()
+	                .setMergeCells(new MergeCellsRequest()
+	                        .setRange(gridRangeMerge)
+	                        .setMergeType("MERGE_ALL"));
+
+	        BatchUpdateSpreadsheetRequest batchUpdateRequestMerge = new BatchUpdateSpreadsheetRequest()
+	                .setRequests(Collections.singletonList(mergeCellsRequest));
+
+	        BatchUpdateSpreadsheetResponse response = service.spreadsheets()
+	                .batchUpdate(request.getSpreadsheet_id(), batchUpdateRequestMerge)
+	                .execute();
+	        System.out.println("");
+	        
+			
+			return res;
 		} catch (Exception e) {
 			System.out.println("====> ERROR: ");
 			System.out.println(e.getMessage());

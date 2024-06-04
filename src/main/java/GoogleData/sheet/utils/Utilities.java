@@ -20,6 +20,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -43,10 +44,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.services.drive.Drive;
+import com.google.api.services.drive.model.Permission;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -65,10 +69,14 @@ import GoogleData.sheet.model.*;
 public class Utilities {
     @Value("${credentials.file.path}")
     private String credentialsFilePath;
+    @Value("${credentials.file.path}")
+    private static String credentialsFilePathStatic;
     @Autowired
     private static GoogleAuthorizationConfig googleAuthorizationConfig;
     @Value("${application.name}")
     private String APPLICATIONNAME;
+    @Value("${application.name}")
+    private static String APPLICATIONNAME_STATIC;
     /*@Value("${url.add.json.stream}")
     private String URL_ADD_JSON_STREAM;
     @Value("${url.add.stream}")
@@ -156,6 +164,20 @@ public class Utilities {
 		} catch (Exception e) {
 			System.out.println("=> ERROR__getServiceSheet__: " + e.getMessage());
 			return new Sheets(null, null, null);
+		}
+	}
+	
+	public Drive getServiceDrive() {
+		try {
+	        NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+	        JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
+	        Credential credential = googleAuthorizationConfig.getCredentialsDrive(HTTP_TRANSPORT, jsonFactory, credentialsFilePath);
+	        return new Drive.Builder(HTTP_TRANSPORT, jsonFactory, credential)
+	                .setApplicationName(APPLICATIONNAME)
+	                .build();
+		} catch (Exception e) {
+			System.out.println("=> ERROR__getServiceSheet__: " + e.getMessage());
+			return null;
 		}
 	}
 	

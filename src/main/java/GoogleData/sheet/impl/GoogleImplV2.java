@@ -377,7 +377,7 @@ public class GoogleImplV2 implements GoogleRestV2Service {
 			        sdf.setTimeZone(zonaHorariaMexico);
 			        String horaMexico = sdf.format(Date);
 					
-					String currentH = Headers[7]+ "-" + horaMexico;
+					String currentH = Headers[8]+ "-" + horaMexico;
 		        	//Validando si existen registros del día de hoy
 		        	String letterExist = utilities.numToLetter(restGet.objectResult.size());
 		        	String HeadersExist = nameSheetMeditionV2.trim() + "!" + letterExist + 1;
@@ -385,13 +385,13 @@ public class GoogleImplV2 implements GoogleRestV2Service {
 		        	String lastH = ArrayH[ArrayH.length -1 ].trim().replaceAll("]", "");
 		        	if(lastH.equals(currentH)) {
 		        		//Existen registros con la fecha de hoy y hay que reemplazalos
-		        		letterInit = utilities.numToLetter(restGet.objectResult.size()-7);
+		        		letterInit = utilities.numToLetter(restGet.objectResult.size()-8);
 		        		existRegister = true;
 		        	}
 		        	else {
 		        		//NO EXISTEN registros de hoy y se insertan en columnas nuevas
 		        		//Insertando encabezados
-						for (int i = 0; i < 8; i++) {
+						for (int i = 0; i < 9; i++) {
 							valHead.add(Headers[i] + "-" + horaMexico);
 						}
 						valuesHeader.add(valHead);
@@ -405,6 +405,7 @@ public class GoogleImplV2 implements GoogleRestV2Service {
 						for (int i = 0; i < listElements.size(); i++) {
 							if (request.getObjectResult().get(j).getSearch().equals(listElements.get(i)) && 
 									request.getObjectResult().get(j).getName().equals(listANames.get(i))) {
+								
 								//INSERTAR ELEMENTOS DEL OBJETO DESCARGA
 								insertDownloadV2(request.getObjectResult().get(j), request, horaMexico);
 								int fila = i + 2;
@@ -412,6 +413,10 @@ public class GoogleImplV2 implements GoogleRestV2Service {
 								List<List<Object>> valuesItems = new ArrayList<List<Object>>();
 								List<Object> valItem = new ArrayList<Object>();
 								
+								valItem.add(request.getObjectResult().get(j).getAuthors());
+								valItem.add(request.getObjectResult().get(j).getImpressions());
+								valItem.add(request.getObjectResult().get(j).getMentions());
+								valItem.add(request.getObjectResult().get(j).getViews());
 								
 								//###_Insertando elementos de alcance Unexplored
 								for (Object itemAlc : request.getObjectResult().get(j).getDataAlcance()) {
@@ -423,15 +428,30 @@ public class GoogleImplV2 implements GoogleRestV2Service {
 											valItem.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(hashitemAlc.get("Whatsapp"))));
 											valItem.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(hashitemAlc.get("Totales"))));
 										}
-										
 									}
+								}
+								for (Object itemAlc : request.getObjectResult().get(j).getDataAlcance()) {
+									HashMap<String,String> hashitemAlc = (HashMap<String,String>) itemAlc;
+									for ( Entry<String, String> itAlcEn : hashitemAlc.entrySet()) {
+										if (itAlcEn.getValue().toString().equals("Publicaciones")) {
+											valItem.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(hashitemAlc.get("Facebook"))));
+										}
+									}
+								}
+								// Insertando la URL del archivo de Tweets en caso de tener
+								if (request.getObjectResult().get(j).getUrlListTweets() != null
+										&& !request.getObjectResult().get(j).getUrlListTweets().isEmpty()) {
+									//Buscar la columna de "URL_archivo"
+									//Mediante la búsqueda encontrar la fila correcta e insertar
+									List<List<Object>> valuesDownload = new ArrayList<List<Object>>();
+									List<Object> itemDownload = new ArrayList<Object>();
+									itemDownload.add(request.getObjectResult().get(j).getUrlListTweets());
+									valuesDownload.add(itemDownload);
+									String RangeDown = nameSheetMeditionV2.trim() + "!" + "M" + fila;
+									googleImpl.updateAndReplaceData(valuesDownload, RangeDown, request.getSpreadsheet_id());
 								}
 								
 								
-								valItem.add(request.getObjectResult().get(j).getAuthors());
-								valItem.add(request.getObjectResult().get(j).getImpressions());
-								valItem.add(request.getObjectResult().get(j).getMentions());
-								valItem.add(request.getObjectResult().get(j).getViews());
 								valuesItems.add(valItem);
 								if(existRegister) 
 									googleImpl.updateAndReplaceData(valuesItems, fileItem, request.getSpreadsheet_id());

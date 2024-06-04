@@ -77,7 +77,7 @@ public class GoogleRest {
 	@PostMapping(value="/sheets/test", 
 	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	@CrossOrigin(origins = "*")
-    public AIResponse test(@RequestBody AIRequest request) {
+    public AIResponse test(@RequestBody TestRequest request) {
 		return googleService.test(request);
    }
 	
