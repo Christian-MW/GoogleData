@@ -76,6 +76,7 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.sheets.v4.model.SpreadsheetProperties;
 import com.google.api.services.sheets.v4.model.TextFormat;
+import com.google.api.services.sheets.v4.model.UpdateSheetPropertiesRequest;
 import com.google.api.services.sheets.v4.model.UpdateSpreadsheetPropertiesRequest;
 import com.google.api.services.sheets.v4.model.UpdateValuesResponse;
 import com.google.api.services.sheets.v4.model.ValueRange;
@@ -1092,6 +1093,52 @@ public class GoogleImpl implements GoogleService {
 			return false;
 		}
  	}
+ 	
+ 	public boolean updateSheet(String spreadsheet_id, String originalName, String updateName) {
+ 		log.info("##########___ACTUALIZANDO NOMBRE DE HOJA DE SHEET___##########");
+ 		log.info("==> Archivo: " + spreadsheet_id);
+ 		log.info("==> Nombre original" + originalName);
+ 		log.info("==> Nombre actualizado" + updateName);
+ 		try {
+ 			Sheets service = getServiceSheet();
+ 	        // Obtén el ID de la hoja llamada "Tweet"
+ 	        Spreadsheet spreadsheet = service.spreadsheets().get(spreadsheet_id).execute();
+ 	        Integer sheetId = null;
+ 	        for (var sheet : spreadsheet.getSheets()) {
+ 	            if (originalName.equals(sheet.getProperties().getTitle())) {
+ 	                sheetId = sheet.getProperties().getSheetId();
+ 	                break;
+ 	            }
+ 	        }
+ 	       if (sheetId != null) {
+ 	            // Crear la solicitud de actualización del nombre de la hoja
+ 	            SheetProperties sheetProperties = new SheetProperties()
+ 	                    .setSheetId(sheetId)
+ 	                    .setTitle(updateName);
+
+ 	            UpdateSheetPropertiesRequest updateSheetPropertiesRequest = new UpdateSheetPropertiesRequest()
+ 	                    .setProperties(sheetProperties)
+ 	                    .setFields("title");
+
+ 	            Request request = new Request().setUpdateSheetProperties(updateSheetPropertiesRequest);
+
+ 	            // Ejecutar la solicitud de actualización
+ 	            List<Request> requests = new ArrayList<>();
+ 	            requests.add(request);
+
+ 	            BatchUpdateSpreadsheetRequest body = new BatchUpdateSpreadsheetRequest().setRequests(requests);
+ 	           service.spreadsheets().batchUpdate(spreadsheet_id, body).execute();
+ 	           log.info("La hoja se actualizó correctamente");
+ 	       }
+ 	       return true;
+ 	        
+		} catch (Exception ex) {
+			log.error("#########__PROBLEMAS AL ACTUALIZAR EL LA HOJA DE SHEET");
+			log.error(ex.getMessage());
+			return false;
+		}
+ 	}
+ 	
  	public GetListSheetsResponse getSheetsBySheet(String sheet_id) {
  		try {
 			SheetRequest reqListSheets = new SheetRequest();
@@ -1376,6 +1423,25 @@ public class GoogleImpl implements GoogleService {
 			log.error("######__PROBLEMAS AL CREAR EL ARCHIVO: ");
 			return "";
 		}
+	}
+	
+	public boolean validateExistFile(String spreadsheetId) throws Exception {
+		log.info("#############___VALIDAR SI EXISTE UN ARCHIVO POR ID___#############");
+		log.info("====> Archivo: " + spreadsheetId);
+		try {
+			Drive driveService = utilities.getServiceDrive();
+            // Intenta obtener el archivo con el ID proporcionado
+			com.google.api.services.drive.model.File file = driveService.files().get(spreadsheetId).execute();
+            log.info("El archivo existe. Nombre del archivo: " + file.getName());
+            return true;
+        } catch (GoogleJsonResponseException e) {
+            if (e.getStatusCode() == 404) {
+                log.error("El archivo no existe.");
+                return false;
+            } else {
+                return false;
+            }
+        }
 	}
 	
 	public void generateSheetVisual(String spreadsheet_id, String sheetName, ReportVisualModel element) {
@@ -1892,7 +1958,14 @@ public class GoogleImpl implements GoogleService {
 		//###############__PRUEBAS DE SERVICIO GOOGLE-SHEETS__########
 		//############################################################
 		try {
-			createFile();
+			//createFile();
+			String letterOrigin1 = utilities.numToLetter(5);
+			String letterOrigin2 = utilities.numToLetter(30);
+			String letterOrigin3 = utilities.numToLetter(99);
+			
+			String letterNew1 = utilities.getnumToLetter(5);
+			String letterNew2 = utilities.getnumToLetter(30);
+			String letterNew3 = utilities.getnumToLetter(99);
 			generateSheetVisual(request.getSpreadsheet_id(), request.getSheet_name(), request.getItem());
 			
 			System.out.println("");

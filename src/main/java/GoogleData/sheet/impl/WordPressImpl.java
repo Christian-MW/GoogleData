@@ -38,6 +38,12 @@ public class WordPressImpl implements WordPressService {
 		log.info("############___saveConfiguration___############");
 		Map<String, Object> map = new HashMap<String, Object>();
 		try {
+			char lc = request.getSite().charAt(request.getSite().length() - 1);
+			if (lc == '/') {
+				request.setSite(request.getSite().substring(0, request.getSite().length() -1 ));
+			}
+			
+			
 			String[] HeadersFile = HEADERS_WP_CONFIG.split(",");
 			if (NAME_SHEET_WP_CONFIG.equals("Configuracion sitios"))
 				NAME_SHEET_WP_CONFIG = "Configuración sitios";
@@ -57,53 +63,87 @@ public class WordPressImpl implements WordPressService {
 				valuesHeader.add(valHead);
 				boolean addHeaders = googleImpl.addHeadersSheet(valuesHeader, Headers_R, request.getSpreadsheet_id());
 			}
-
-			// Insertando los datos del objeto
-			// SheetResponse restGet = googleImpl.getDataSheetByFilter("COLUMNS",
-			// request.getSpreadsheet_id(),NAME_SHEET_WP_CONFIG.trim());
+			
+			//Buscando el email del usuario para saber si insertar o actualizar el registro
 			SheetResponse restGetRaw = googleImpl.getDataSheetByFilter("RAW", request.getSpreadsheet_id(),
 					NAME_SHEET_WP_CONFIG.trim());
-			int countReg = restGetRaw.objectResult.size() + 1;
+			//Buscando las posiciones de las columnas
+			List<Object> headersFile = restGetRaw.objectResult.get(0);
+			String letterUserWP = utilities.numToLetter(headersFile.indexOf("Usuario WordPress") + 1);
+			String letterTokenGPT = utilities.numToLetter(headersFile.indexOf("Token ChatGPT") + 1);
 
-			log.info("=>Procesando los elementos a insertar de configuración WordPress");
-			log.info("Primero se revisa que si existe el sitio en el archivo");
 			List<String> listElements = googleImpl.getDataByColumn(request.getSpreadsheet_id(), NAME_COLUMN_SITE,
 					NAME_SHEET_WP_CONFIG.trim());
-			int posItem = 1;
-			boolean exSite = false;
-			for (String item : listElements) {
-				posItem++;
-				if (item.equals(request.getSite())) {
-					exSite = true;
-					break;
-				}
-			}
-			// Valida si se tiene que actualizar el token de ChatGPT
-
+			
+			String Headers_R = "";
+			int countReg = restGetRaw.objectResult.size() + 1;
+			ArrayList<Integer> positions = new ArrayList<>();
+	        for (int i = 0; i < listElements.size(); i++) {
+	            if (listElements.get(i).equals(request.getEmail())) {
+	                positions.add(i);
+	            }
+	        }
+	        
 			List<List<Object>> valuesItems = new ArrayList<List<Object>>();
 			List<Object> valItem = new ArrayList<Object>();
-			// Si el sitio existe lo actualiza
-			String Headers_R = "";
-			if (exSite)
-				Headers_R = NAME_SHEET_WP_CONFIG.trim() + "!A" + posItem;
-			else
-				// Si no existe crea el registro
+			Boolean existReg = false;
+			//Sí existe el correo se actualiza en caso de no existir se inserta el registro
+			if(positions.size() > 0) {
+				//Existe por lo menos un email
+				for (int i = 0; i < positions.size(); i++) {
+					System.out.println(positions.get(i));
+					List<Object> register = restGetRaw.objectResult.get(positions.get(i) + 1);
+					System.out.println(register.get(1).toString());
+					System.out.println(request.getSite());
+					
+					char lcb = register.get(1).toString().charAt(register.get(1).toString().length() - 1);
+					String reg = "";
+					if (lcb == '/') 
+						reg = register.get(1).toString().substring(0, register.get(1).toString().length() - 1);
+					else 
+						reg = register.get(1).toString();
+					
+					if(reg.equals(request.getSite())) {
+						//El correo coincide con el sitio
+						int pos = positions.get(i) + 2;
+						Headers_R = NAME_SHEET_WP_CONFIG.trim() + "!" + letterUserWP + pos;
+						valItem.add(request.getUserWP());
+						valItem.add(request.getPassWP());
+						existReg = true;
+						break;
+					}
+					else {
+						existReg = false;
+					}
+				}
+			}
+			else {
 				Headers_R = NAME_SHEET_WP_CONFIG.trim() + "!A" + countReg;
+				valItem.add(request.getEmail());
+				valItem.add(request.getSite());
+				valItem.add(request.getUserWP());
+				valItem.add(request.getPassWP());
+				existReg = true;
+			}
+			if(!existReg) {
+				Headers_R = NAME_SHEET_WP_CONFIG.trim() + "!A" + countReg;
+				valItem.add(request.getEmail());
+				valItem.add(request.getSite());
+				valItem.add(request.getUserWP());
+				valItem.add(request.getPassWP());
+			}
 
-			valItem.add(request.getSite());
-			valItem.add(request.getUserWP());
-			valItem.add(request.getPassWP());
 			valuesItems.add(valItem);
 			googleImpl.updateAndReplaceData(valuesItems, Headers_R, request.getSpreadsheet_id());
 			Thread.sleep(800);
-
+			
 			// Actualizar solo el token de ChatGPT dependiendo del status
 			if (request.isChangeTCGPT()) {
 				List<List<Object>> valuesToken = new ArrayList<List<Object>>();
 				List<Object> valToken = new ArrayList<Object>();
 				valToken.add("Bearer " + request.getTokenChatGPT());
 				valuesToken.add(valToken);
-				googleImpl.updateAndReplaceData(valuesToken, NAME_SHEET_WP_CONFIG.trim() + "!D2",
+				googleImpl.updateAndReplaceData(valuesToken, NAME_SHEET_WP_CONFIG.trim() + "!"+letterTokenGPT+"2",
 						request.getSpreadsheet_id());
 				Thread.sleep(800);
 			}

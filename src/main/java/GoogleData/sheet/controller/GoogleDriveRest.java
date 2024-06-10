@@ -22,11 +22,11 @@ public class GoogleDriveRest {
 	@Autowired
 	GoogleDriveService googleDriveService;
 	
-	@PostMapping(value="/API/savefile", 
+	@PostMapping(value="/API/fileUpload", 
 	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	@CrossOrigin(origins = "*")
 	public ResponseEntity<?> getDataSpreadsheet(@RequestBody SaveFileDriveRequest request) {
-		return googleDriveService.saveFile(request);
+		return googleDriveService.fileUpload(request);
 	}
 	
 	@PostMapping(value="/API/saveDatafile", 

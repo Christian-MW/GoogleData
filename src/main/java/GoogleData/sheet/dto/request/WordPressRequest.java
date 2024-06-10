@@ -7,6 +7,7 @@ public class WordPressRequest {
 	private String passWP;
 	private String tokenChatGPT;
 	private boolean changeTCGPT;
+	private String email;
 	
 	public String getSpreadsheet_id() {
 		return spreadsheet_id;
@@ -43,5 +44,11 @@ public class WordPressRequest {
 	}
 	public void setChangeTCGPT(boolean changeTCGPT) {
 		this.changeTCGPT = changeTCGPT;
+	}
+	public String getEmail() {
+		return email;
+	}
+	public void setEmail(String email) {
+		this.email = email;
 	}
 }

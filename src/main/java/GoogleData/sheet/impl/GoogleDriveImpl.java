@@ -41,9 +41,11 @@ public class GoogleDriveImpl implements GoogleDriveService {
     @Autowired
     Utilities utilities;
 	
+    /*
+     * Mediante un archivo se cargará al drive*/
 	@Override
-	public ResponseEntity<?> saveFile(SaveFileDriveRequest request) {
-		log.info("#########___SUBIENDO EL ARCHIVO AL GOOGLE DRIVE___#########");
+	public ResponseEntity<?> fileUpload(SaveFileDriveRequest request) {
+		log.info("#########___CARGANDO EL ARCHIVO AL GOOGLE DRIVE___#########");
 		try {
 			
 			return null;
@@ -65,44 +67,73 @@ public class GoogleDriveImpl implements GoogleDriveService {
 		log.info("#######################################################");
 		Map<String, Object> map = new HashMap<String, Object>();
 		try {
-			Sheets service = utilities.getServiceSheet();
-	        // Crear una nueva hoja de cálculo
-	        Spreadsheet spreadsheet = new Spreadsheet()
-	                .setProperties(new SpreadsheetProperties()
-	                        .setTitle("Archivo de Tweets"));
-	        Spreadsheet createdSpreadsheet = service.spreadsheets().create(spreadsheet).execute();
-	        String spreadsheetId = createdSpreadsheet.getSpreadsheetId();
+			//##_Validamos si existe un archivo con ese id
+			boolean existFile = false;
+			if (request.getSpreadsheet_id() != null && !request.getSpreadsheet_id().isEmpty()) {
+				existFile = googleImpl.validateExistFile(request.getSpreadsheet_id());
+			}
+			
+			String IDspreadsheet = "";
+			String messageResult = "";
+			Integer codeResult = 0;
+			if(!existFile) {
+				log.info("#####_El ARCHIVO NO EXISTE hay que crearlo");
+				Sheets service = utilities.getServiceSheet();
+		        // Crear una nueva hoja de cálculo
+		        Spreadsheet spreadsheet = new Spreadsheet()
+		                .setProperties(new SpreadsheetProperties()
+		                        .setTitle("Archivo de Tweets"));
+		        Spreadsheet createdSpreadsheet = service.spreadsheets().create(spreadsheet).execute();
+		        String spreadsheetId = createdSpreadsheet.getSpreadsheetId();
 
-	        // Añadir una nueva hoja con un nombre específico
-	        SheetProperties sheetProperties = new SheetProperties().setTitle("Tweets");
-	        AddSheetRequest addSheetRequest = new AddSheetRequest().setProperties(sheetProperties);
-	        Request requestFile = new Request().setAddSheet(addSheetRequest);
-	        BatchUpdateSpreadsheetRequest batchUpdateRequest = new BatchUpdateSpreadsheetRequest()
-	                .setRequests(Collections.singletonList(requestFile));
+		        // Añadir una nueva hoja con un nombre específico
+		        SheetProperties sheetProperties = new SheetProperties().setTitle("Tweets");
+		        AddSheetRequest addSheetRequest = new AddSheetRequest().setProperties(sheetProperties);
+		        Request requestFile = new Request().setAddSheet(addSheetRequest);
+		        BatchUpdateSpreadsheetRequest batchUpdateRequest = new BatchUpdateSpreadsheetRequest()
+		                .setRequests(Collections.singletonList(requestFile));
 
-	        BatchUpdateSpreadsheetResponse batchUpdateResponse = service.spreadsheets()
-	                .batchUpdate(spreadsheetId, batchUpdateRequest)
-	                .execute();
-	        Thread.sleep(800);
-	        log.info("Hoja creada con éxito: " + batchUpdateResponse);
-	        
-	        // Compartir el archivo con correos específicos
-	        Drive driveService = utilities.getServiceDrive();
-	        String fileId = spreadsheetId;  // Reemplaza con el ID del archivo que deseas compartir
-	        /*String emailAddress = "christian.garcia@mwgroup.com.mx";
-	        Permission permission = new Permission()
-	                .setType("user")
-	                .setRole("writer")
-	                .setEmailAddress(emailAddress);*/
-	        // Crear permiso para "anyone with the link"
-	        Permission permission = new Permission()
-	                .setType("anyone")
-	                .setRole("writer");
+		        BatchUpdateSpreadsheetResponse batchUpdateResponse = service.spreadsheets()
+		                .batchUpdate(spreadsheetId, batchUpdateRequest)
+		                .execute();
+		        Thread.sleep(800);
+		        IDspreadsheet = spreadsheetId;
+		        log.info("Hoja creada con éxito: " + batchUpdateResponse);
+		        
+		        // Compartir el archivo con correos específicos
+		        Drive driveService = utilities.getServiceDrive();
+		        String fileId = spreadsheetId;  // Reemplaza con el ID del archivo que deseas compartir
+		        /*String emailAddress = "christian.garcia@mwgroup.com.mx";
+		        Permission permission = new Permission()
+		                .setType("user")
+		                .setRole("writer")
+		                .setEmailAddress(emailAddress);*/
+		        // Crear permiso para "anyone with the link"
+		        Permission permission = new Permission()
+		                .setType("anyone")
+		                .setRole("writer");
 
-	        driveService.permissions().create(fileId, permission)
-	                .setFields("id")
-	                .execute();
-	        
+		        driveService.permissions().create(fileId, permission)
+		                .setFields("id")
+		                .execute();
+		        messageResult = "UPDATED";
+			}
+			else {
+				log.info("#####_Archivo existente, hay que actualizarlo");
+				IDspreadsheet = request.getSpreadsheet_id();
+				messageResult = "OK";
+				googleImpl.updateSheet(request.getSpreadsheet_id(), "Tweets", "Tweets2");
+				Thread.sleep(500);
+		        //Eliminando hoja "Tweets" que se crea automáticamente
+				googleImpl.createSheet(request.getSpreadsheet_id(), "Tweets");
+				Thread.sleep(500);
+				googleImpl.deleteSheet(request.getSpreadsheet_id(), "Tweets2");
+				Thread.sleep(500);
+				
+				
+
+			}
+			
 	        //Llenar la hoja con todos los elementos correspondientes de los tweets
 	        //#_Agregando encabezados
 	        String[] headers = HEADERS_FILE_TWEETS.split(",");
@@ -113,7 +144,7 @@ public class GoogleDriveImpl implements GoogleDriveService {
 			}
 			valuesHeader.add(valHead);
 			String RangeHeaders = "Tweets!A1"; 
-			boolean addHeaders = googleImpl.addHeadersSheet(valuesHeader, RangeHeaders, spreadsheetId);
+			boolean addHeaders = googleImpl.addHeadersSheet(valuesHeader, RangeHeaders, IDspreadsheet);
 			Thread.sleep(800);
 	        
 	        //#_Agregando elementos
@@ -129,17 +160,17 @@ public class GoogleDriveImpl implements GoogleDriveService {
 				valItem.add(tweet.getEngagement());
 				valuesItems.add(valItem);
 			}
-			googleImpl.updateAndReplaceData(valuesItems, RangeItems, spreadsheetId);
+			googleImpl.updateAndReplaceData(valuesItems, RangeItems, IDspreadsheet);
 			Thread.sleep(800);
 			
 	        //Eliminando hoja "Sheet1" que se crea automáticamente
-			googleImpl.deleteSheet(spreadsheetId, "Sheet1");
+			googleImpl.deleteSheet(IDspreadsheet, "Sheet1");
 	        
 	        //URL del archivo
-	        String urlFile = "https://docs.google.com/spreadsheets/d/" + spreadsheetId;
+	        String urlFile = "https://docs.google.com/spreadsheets/d/" + IDspreadsheet;
 	        log.info("##===>El archivo se creo correctamente: " + urlFile);
 			map.put("code", 200);
-			map.put("message", "OK");
+			map.put("message", messageResult);
 			map.put("url", urlFile);
 			ResponseEntity<?> res = utilities.getResponseEntity(map);
 			return res;

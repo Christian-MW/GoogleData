@@ -107,7 +107,7 @@ public class Utilities {
 		String letter = "";
 		HashMap<Integer,String>map=new HashMap<>();
 		try {
-			
+			//System.out.println("Start numToLetter: " + System.currentTimeMillis() / 1000);
 			Integer pos = 0;
 			String AlphabetS=" ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 			char[] charArrS = AlphabetS.toCharArray();
@@ -141,14 +141,29 @@ public class Utilities {
 				}
 			}
 			
-		    System.out.print(map.get(num)+" ");
+		    System.out.println(map.get(num)+" ");
 		    letter = map.get(num);
+		    //System.out.println("END numToLetter: " + System.currentTimeMillis() / 1000);
 		    return letter;
 		} catch (Exception ex) {
 			return letter;
 		}
 	}
 	
+	public String getnumToLetter(Integer number) {
+		//System.out.println("Start getnumToLetter: " + System.currentTimeMillis() / 1000);
+        StringBuilder columnName = new StringBuilder();
+        
+        while (number > 0) {
+            number--; // Ajustar a índice cero
+            int remainder = number % 26;
+            columnName.append((char) (remainder + 'A'));
+            number = number / 26;
+        }
+        //System.out.println(columnName.reverse().toString());
+        //System.out.println("end getnumToLetter: " + System.currentTimeMillis() / 1000);
+        return columnName.reverse().toString();
+    }
 	
 	public Sheets getServiceSheet() {
 		try {

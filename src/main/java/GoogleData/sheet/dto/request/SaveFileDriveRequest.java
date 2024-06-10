@@ -6,6 +6,7 @@ import GoogleData.sheet.model.FileTweetsMeltModel;
 
 public class SaveFileDriveRequest {
 	private String user;
+	private String spreadsheet_id;
 	private List<FileTweetsMeltModel> items;
 	
 	public String getUser() {
@@ -13,6 +14,12 @@ public class SaveFileDriveRequest {
 	}
 	public void setUser(String user) {
 		this.user = user;
+	}
+	public String getSpreadsheet_id() {
+		return spreadsheet_id;
+	}
+	public void setSpreadsheet_id(String spreadsheet_id) {
+		this.spreadsheet_id = spreadsheet_id;
 	}
 	public List<FileTweetsMeltModel> getItems() {
 		return items;

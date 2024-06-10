@@ -7,6 +7,6 @@ import GoogleData.sheet.dto.request.SaveFileDriveRequest;
 
 @Component
 public interface GoogleDriveService {
-	ResponseEntity<?> saveFile(SaveFileDriveRequest request);
+	ResponseEntity<?> fileUpload(SaveFileDriveRequest request);
 	ResponseEntity<?> saveDatafile(SaveFileDriveRequest request);
 }
