@@ -603,8 +603,20 @@ public class Utilities {
 			return result;
 		}
 	}
- 	
-	public String getMonth(String date) {
+ 	//Obtener fecha en formato dd-mm-yyyy
+ 	public String getDateString() {
+ 		try {
+ 			java.util.Date fechaActual = new java.util.Date();
+ 			java.text.SimpleDateFormat formatoFecha = new java.text.SimpleDateFormat("dd-MM-yyyy");
+ 	        String fechaFormateada = formatoFecha.format(fechaActual);
+ 			return fechaFormateada;
+		} catch (Exception e) {
+			log.error("===>Problemas al formatear la fecha");
+			log.error(e.getMessage());
+			return "";
+		}
+ 	}
+ 	public String getMonth(String date) {
 
 		try {
 			String[] arrDate = date.split("/");
@@ -666,7 +678,25 @@ public class Utilities {
 			return text;
 		}
 	}
-	
+	// Método para transponer la lista de listas
+	public List<List<Object>> transpose(List<List<Object>> values) {
+	    List<List<Object>> transposed = new ArrayList<>();
+	    if (values.isEmpty()) {
+	        return transposed;
+	    }
+
+	    int numRows = values.size();
+	    int numCols = values.get(0).size();
+
+	    for (int col = 0; col < numCols; col++) {
+	        List<Object> newRow = new ArrayList<>();
+	        for (int row = 0; row < numRows; row++) {
+	            newRow.add(values.get(row).get(col));
+	        }
+	        transposed.add(newRow);
+	    }
+	    return transposed;
+	}
 	
 	//###########CHAT-GPT
 	public void GetModelsChatGPT() {
@@ -761,40 +791,41 @@ public class Utilities {
 			return result;
 		}
 	}
+
 	public AIResponse sendTextChatGPT3Turbo(String text) {
-		
+
 		log.info("###########___ENVÍAR MENSAJE A CHAT-GPT___###########");
 		AIResponse result = new AIResponse();
 		String url = URL_CHATGPT_V1 + "/chat/completions";
 		try {
 			log.info(text);
-			
+
 			java.net.HttpURLConnection con = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
-	        con.setRequestMethod("POST");
-	        con.setRequestProperty("Content-Type", "application/json");
-	        con.setRequestProperty("Authorization", TOKEN_CHATGPT);
-	        org.json.JSONObject message = new org.json.JSONObject();
-	        message.put("role", "user");
-	        message.put("content", text);
-	        List<org.json.JSONObject> obj = new ArrayList<org.json.JSONObject>();
-	        obj.add(message);
-	        
-	        org.json.JSONObject data = new org.json.JSONObject();
-	        data.put("model", "gpt-3.5-turbo");
-	        data.put("messages", obj);
-			
-	        con.setDoOutput(true);
-	        con.getOutputStream().write(data.toString().getBytes());
+			con.setRequestMethod("POST");
+			con.setRequestProperty("Content-Type", "application/json");
+			con.setRequestProperty("Authorization", TOKEN_CHATGPT);
+			org.json.JSONObject message = new org.json.JSONObject();
+			message.put("role", "user");
+			message.put("content", text);
+			List<org.json.JSONObject> obj = new ArrayList<org.json.JSONObject>();
+			obj.add(message);
 
-	        String output = new BufferedReader(new java.io.InputStreamReader(con.getInputStream())).lines()
-	                .reduce((a, b) -> a + b).get();
+			org.json.JSONObject data = new org.json.JSONObject();
+			data.put("model", "gpt-3.5-turbo");
+			data.put("messages", obj);
 
-	        result.setMessageChatGTP(new org.json.JSONObject(output).getJSONArray("choices").getJSONObject(0)
-	        		.getJSONObject("message").getString("content"));
-	        result.setCode(200);
-	        log.info(result);
-	        return result;
-			
+			con.setDoOutput(true);
+			con.getOutputStream().write(data.toString().getBytes());
+
+			String output = new BufferedReader(new java.io.InputStreamReader(con.getInputStream())).lines()
+					.reduce((a, b) -> a + b).get();
+
+			result.setMessageChatGTP(new org.json.JSONObject(output).getJSONArray("choices").getJSONObject(0)
+					.getJSONObject("message").getString("content"));
+			result.setCode(200);
+			log.info(result);
+			return result;
+
 		} catch (Exception e) {
 			log.error("#####__ERROR_SEND_TEXT_CHATGPT___#####");
 			log.error(e.getMessage());
@@ -803,20 +834,19 @@ public class Utilities {
 			return result;
 		}
 	}
+
 	public AIResponse getInfoWikipedia(String search) {
-		
+
 		AIResponse res = new AIResponse();
 		try {
 			search = search.replace(" ", "%20");
-		    var req = HttpRequest.newBuilder()
+			var req = HttpRequest.newBuilder()
 					.uri(URI.create("https://es.wikipedia.org/w/api.php?action=query&"
 							+ "prop=revisions&rvprop=content&format=json&titles=" + search))
-					.header("Content-type", "application/json")
-					.GET()		
-					.build();
+					.header("Content-type", "application/json").GET().build();
 			var client = HttpClient.newHttpClient();
 			var response = client.send(req, HttpResponse.BodyHandlers.ofString());
-			
+
 			log.info("##=>Response_____sendItemStream: ");
 			log.info(response.statusCode());
 			log.info(response.body());
@@ -825,7 +855,7 @@ public class Utilities {
 			Map<String, Object> map = mapper.readValue(response.body(), Map.class);
 			res.setMessageWikipedia(map.get("query"));
 			res.setCode(200);
-			
+
 			return res;
 		} catch (Exception e) {
 			log.error("#####__ERROR_GET_INFORMATION_WIKIPEDIA___#####");
@@ -834,58 +864,81 @@ public class Utilities {
 			return res;
 		}
 	}
-	   public SendResponse sendTelegram(TelegramSendModel request, String type) {
-		   SendResponse response = new SendResponse("200","OK",false,"");
-				
-			try {
-				
-				String urlString =apiTelegram;
-				String apiToken = request.getFrom()+":"+request.getToken();
-				String chatId = request.getTo();
-				
-				if(Strings.isEmpty(request.getToken())) {
-					apiToken = telegramBot;
-				}
-		        	        
-				switch (type.toUpperCase()) {
-				case "CHAT":
-					urlString+=telegramSendchat;
-					String text = URLEncoder.encode(request.getText(), StandardCharsets.UTF_8);
-					urlString = String.format(urlString, apiToken, chatId, text);
-					break;
-		
-				case "LINK":
-		
-					break;	
-		
-				case "IMAGEN":case "IMG":
-					break;
-		
-				default:
-					break;
-				}
-				
-				
-	            URL _url = new URL(urlString);
-	            URLConnection conn = _url.openConnection();
-	            InputStream is = new BufferedInputStream(conn.getInputStream());
-	            
-	            if(request.getReplica() > 0) {
-	            	for (int i = 0; i < request.getReplica(); i++) {
-	                     conn = _url.openConnection();
-	                     is = new BufferedInputStream(conn.getInputStream());                     
-					}
-	            }
-	            
-	            response.setSended(true);
-				response.setUid("");
-				
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				 response.setCode("500");response.setMessage(e.getMessage());
+
+	public SendResponse sendTelegram(TelegramSendModel request, String type) {
+		SendResponse response = new SendResponse("200", "OK", false, "");
+
+		try {
+
+			String urlString = apiTelegram;
+			String apiToken = request.getFrom() + ":" + request.getToken();
+			String chatId = request.getTo();
+
+			if (Strings.isEmpty(request.getToken())) {
+				apiToken = telegramBot;
 			}
-		   
-			return response;
-	    }
+
+			switch (type.toUpperCase()) {
+			case "CHAT":
+				urlString += telegramSendchat;
+				String text = URLEncoder.encode(request.getText(), StandardCharsets.UTF_8);
+				urlString = String.format(urlString, apiToken, chatId, text);
+				break;
+
+			case "LINK":
+
+				break;
+
+			case "IMAGEN":
+			case "IMG":
+				break;
+
+			default:
+				break;
+			}
+
+			URL _url = new URL(urlString);
+			URLConnection conn = _url.openConnection();
+			InputStream is = new BufferedInputStream(conn.getInputStream());
+
+			if (request.getReplica() > 0) {
+				for (int i = 0; i < request.getReplica(); i++) {
+					conn = _url.openConnection();
+					is = new BufferedInputStream(conn.getInputStream());
+				}
+			}
+
+			response.setSended(true);
+			response.setUid("");
+
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			response.setCode("500");
+			response.setMessage(e.getMessage());
+		}
+
+		return response;
+	}
+
+	// Función para leer el JSON de datos y regresar su contenido
+	public List<ProyectModel> getDataFile() {
+		try {
+			ObjectMapper objectMapper = new ObjectMapper();
+			// Leer el archivo JSON
+			File file = new File("Data.json");
+			File file2 = new File("../../Data.json");
+			DataResultService dataResponse = objectMapper.readValue(file, DataResultService.class);
+			System.out.println("Código: " + dataResponse.getCode());
+			if (dataResponse.getCode() == 200) {
+				return dataResponse.getResult();
+			} else {
+				return null;
+			}
+		} catch (Exception ex) {
+			log.error("####################--PROBLEMAS AL LEER EL JSON--");
+			log.error(ex.getMessage());
+			return null;
+		}
+	}
 }

@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import GoogleData.sheet.dto.request.SaveLogWordPressRequest;
 import GoogleData.sheet.dto.request.WordPressRequest;
 import GoogleData.sheet.dto.response.SheetResponse;
 import GoogleData.sheet.service.WordPressService;
@@ -28,6 +29,12 @@ public class WordPressImpl implements WordPressService {
     private String NAME_SHEET_WP_CONFIG;
     @Value("${file.wordpress.name.col}")
     private String NAME_COLUMN_SITE;
+    
+    @Value("${file.headers.wordpress.log}")
+    private String NAME_COLUMNS_WP_LOG;
+    @Value("${file.wordpress.name.log}")
+    private String NAME_SHEET_WP_LOGS;
+    
 	@Autowired
 	GoogleImpl googleImpl;
     @Autowired
@@ -52,7 +59,7 @@ public class WordPressImpl implements WordPressService {
 					utilities.cleanNameSheet(NAME_SHEET_WP_CONFIG.trim().toLowerCase()));
 			// Si la hoja no existe se crea y se agregan encabezados
 			if (!existSh) {
-				System.out.println("La hoja NO Existe");
+				log.info("La hoja NO Existe");
 				googleImpl.createSheet(request.getSpreadsheet_id(), NAME_SHEET_WP_CONFIG.trim());
 				String Headers_R = NAME_SHEET_WP_CONFIG.trim() + "!A1";
 				List<List<Object>> valuesHeader = new ArrayList<List<Object>>();
@@ -87,15 +94,16 @@ public class WordPressImpl implements WordPressService {
 			List<List<Object>> valuesItems = new ArrayList<List<Object>>();
 			List<Object> valItem = new ArrayList<Object>();
 			Boolean existReg = false;
+			int posGPT = 0;
 			//Sí existe el correo se actualiza en caso de no existir se inserta el registro
 			if(positions.size() > 0) {
 				//Existe por lo menos un email
 				for (int i = 0; i < positions.size(); i++) {
-					System.out.println(positions.get(i));
+					//System.out.println(positions.get(i));
 					List<Object> register = restGetRaw.objectResult.get(positions.get(i) + 1);
-					System.out.println(register.get(1).toString());
-					System.out.println(request.getSite());
-					
+					//System.out.println(register.get(1).toString());
+					//System.out.println(request.getSite());
+					posGPT = positions.get(i) + 2;
 					char lcb = register.get(1).toString().charAt(register.get(1).toString().length() - 1);
 					String reg = "";
 					if (lcb == '/') 
@@ -109,6 +117,7 @@ public class WordPressImpl implements WordPressService {
 						Headers_R = NAME_SHEET_WP_CONFIG.trim() + "!" + letterUserWP + pos;
 						valItem.add(request.getUserWP());
 						valItem.add(request.getPassWP());
+						valItem.add(request.getTokenChatGPT());
 						existReg = true;
 						break;
 					}
@@ -123,6 +132,7 @@ public class WordPressImpl implements WordPressService {
 				valItem.add(request.getSite());
 				valItem.add(request.getUserWP());
 				valItem.add(request.getPassWP());
+				valItem.add(request.getTokenChatGPT());
 				existReg = true;
 			}
 			if(!existReg) {
@@ -131,6 +141,7 @@ public class WordPressImpl implements WordPressService {
 				valItem.add(request.getSite());
 				valItem.add(request.getUserWP());
 				valItem.add(request.getPassWP());
+				valItem.add(request.getTokenChatGPT());
 			}
 
 			valuesItems.add(valItem);
@@ -138,15 +149,15 @@ public class WordPressImpl implements WordPressService {
 			Thread.sleep(800);
 			
 			// Actualizar solo el token de ChatGPT dependiendo del status
-			if (request.isChangeTCGPT()) {
+			/*if (request.isChangeTCGPT()) {
 				List<List<Object>> valuesToken = new ArrayList<List<Object>>();
 				List<Object> valToken = new ArrayList<Object>();
 				valToken.add("Bearer " + request.getTokenChatGPT());
 				valuesToken.add(valToken);
-				googleImpl.updateAndReplaceData(valuesToken, NAME_SHEET_WP_CONFIG.trim() + "!"+letterTokenGPT+"2",
+				googleImpl.updateAndReplaceData(valuesToken, NAME_SHEET_WP_CONFIG.trim() + "!"+letterTokenGPT+posGPT,
 						request.getSpreadsheet_id());
 				Thread.sleep(800);
-			}
+			}*/
 			map.put("code", 200);
 			map.put("message", "OK");
 			ResponseEntity<?> res = utilities.getResponseEntity(map);
@@ -160,5 +171,51 @@ public class WordPressImpl implements WordPressService {
 			return res;
 		}
 	}
-
+	/**********************************
+	 * //Almacenar proceso en bitácora
+	 ********************************** */
+	public ResponseEntity<?> saveLog(SaveLogWordPressRequest request){
+		Map<String, Object> map = new HashMap<String, Object>();
+		try {
+			String[] HeadersFile = NAME_COLUMNS_WP_LOG.split(",");
+			String nameSheet = NAME_SHEET_WP_LOGS;
+			if (nameSheet.equals("Bitacora")) {
+				nameSheet = "Bitácora";
+			}
+			//Buscando el email del usuario para saber si insertar o actualizar el registro
+			SheetResponse restGetRaw = googleImpl.getDataSheetByFilter("RAW", request.getSpreadsheet_id(),nameSheet.trim());
+			Integer size = restGetRaw.objectResult.size() + 1;
+			
+			String Headers_R = nameSheet.trim() + "!A" + size;
+			List<List<Object>> valuesItems = new ArrayList<List<Object>>();
+			List<Object> valItem = new ArrayList<Object>();
+			
+			/*String[] AllDate = request.getDate().split("T");
+			String[] dateArr =AllDate[0].split("-");
+			String date = dateArr[2] + "/" + dateArr[1] + "/" + dateArr[0];
+			String[] hourArr = AllDate[1].split(":");
+			String hour = hourArr[0] + ":" + hourArr[1];*/
+			
+			valItem.add(request.getUser());
+			valItem.add(request.getDate());
+			valItem.add(request.getBlog());
+			valItem.add(request.getSite());
+			valItem.add(request.getUrl_post());
+			valuesItems.add(valItem);
+			googleImpl.updateAndReplaceData(valuesItems, Headers_R, request.getSpreadsheet_id());
+			Thread.sleep(800);
+			
+			map.put("code", 200);
+			map.put("message", "OK");
+			ResponseEntity<?> res = utilities.getResponseEntity(map);
+			return res;
+		} catch (Exception ex) {
+			log.error("####################___ERROR_AL_ALMACENAR_OBJETO_EN_BITÁCORA____###############");
+			log.error(ex.getMessage());
+			map.put("operation", 500);
+			map.put("message", "ERROR");
+			ResponseEntity<?> res = utilities.getResponseEntity(map);
+			return res;
+		}
+	}
 }

@@ -6,6 +6,7 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -52,5 +53,14 @@ public class ToolsRest {
 	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public SendMessageChatGPTResponse processLines(@RequestBody SendMessageChatGPTRequest request) {
 		return toolsService.processMessageChatgpt(request);
+   }
+	
+	
+	//DEPORTES
+	@CrossOrigin(origins = "*")
+	@PostMapping(value="/Sports/SaveTeams", 
+	consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> saveTeams(@RequestBody SaveTeamsRequest request) {
+		return toolsService.saveTeams(request);
    }
 }

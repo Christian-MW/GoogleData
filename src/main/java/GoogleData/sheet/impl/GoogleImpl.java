@@ -1345,6 +1345,27 @@ public class GoogleImpl implements GoogleService {
 		}
 	}
 	
+	public boolean updateAndReplaceDataByColumn(List<List<Object>> values, String Headers_Range, String spreadsheet_id) {
+	    String valueInputOption = "RAW";
+	    try {
+	        Sheets service = getServiceSheet();
+	        
+	        // Transponer los valores
+	        List<List<Object>> transposedValues = utilities.transpose(values);
+	        
+	        ValueRange bodyPost = new ValueRange()
+	                .setValues(transposedValues);
+	        
+	        Sheets.Spreadsheets.Values.Update request =
+	                service.spreadsheets().values().update(spreadsheet_id, Headers_Range, bodyPost);
+	        request.setValueInputOption(valueInputOption).execute();
+	        return true;
+	    } catch (Exception ex) {
+	        log.error(ex.getMessage());
+	        return false;
+	    }
+	}
+	
 	public Integer getIdFromSheet(String spreadsheetId, String sheetName) {
 		log.info("###############__OBTENER EL ID DE UNA HOJA DE SHEET__################");
 		try {

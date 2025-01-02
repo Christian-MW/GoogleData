@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import GoogleData.sheet.dto.request.SaveLogWordPressRequest;
 import GoogleData.sheet.dto.request.WordPressRequest;
 import GoogleData.sheet.service.WordPressService;
 
@@ -27,5 +28,12 @@ public class WordPressRest {
 	@CrossOrigin(origins = "*")
 	public ResponseEntity<?> saveConfiguration(@RequestBody WordPressRequest request) {
 		return wordPressService.saveConfiguration(request);
+	}
+	
+	@PostMapping(value="/API/SaveLog",
+			consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+			@CrossOrigin(origins = "*")
+	public ResponseEntity<?> saveLog(@RequestBody SaveLogWordPressRequest request) {
+		return wordPressService.saveLog(request);
 	}
 }

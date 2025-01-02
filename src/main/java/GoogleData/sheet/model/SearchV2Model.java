@@ -14,6 +14,7 @@ public class SearchV2Model {
 	private String urlListTweets;
 	private SearchV2DW downloads;
 	private ArrayList<Object> dataAlcance;
+	private SentimentV2 sentiment;
 	//private List<DataAlcanceModel> dataAlcance;
 	
 	public String getName() {
@@ -75,6 +76,12 @@ public class SearchV2Model {
 	}
 	public void setDataAlcance(ArrayList<Object> dataAlcance) {
 		this.dataAlcance = dataAlcance;
+	}
+	public SentimentV2 getSentiment() {
+		return sentiment;
+	}
+	public void setSentiment(SentimentV2 sentiment) {
+		this.sentiment = sentiment;
 	}
 	
 }

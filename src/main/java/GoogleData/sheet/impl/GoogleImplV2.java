@@ -377,7 +377,7 @@ public class GoogleImplV2 implements GoogleRestV2Service {
 			        sdf.setTimeZone(zonaHorariaMexico);
 			        String horaMexico = sdf.format(Date);
 					
-					String currentH = Headers[8]+ "-" + horaMexico;
+					String currentH = Headers[11]+ "-" + horaMexico;
 		        	//Validando si existen registros del día de hoy
 		        	String letterExist = utilities.numToLetter(restGet.objectResult.size());
 		        	String HeadersExist = nameSheetMeditionV2.trim() + "!" + letterExist + 1;
@@ -385,13 +385,13 @@ public class GoogleImplV2 implements GoogleRestV2Service {
 		        	String lastH = ArrayH[ArrayH.length -1 ].trim().replaceAll("]", "");
 		        	if(lastH.equals(currentH)) {
 		        		//Existen registros con la fecha de hoy y hay que reemplazalos
-		        		letterInit = utilities.numToLetter(restGet.objectResult.size()-8);
+		        		letterInit = utilities.numToLetter(restGet.objectResult.size() - (Headers.length -1));
 		        		existRegister = true;
 		        	}
 		        	else {
 		        		//NO EXISTEN registros de hoy y se insertan en columnas nuevas
 		        		//Insertando encabezados
-						for (int i = 0; i < 9; i++) {
+						for (int i = 0; i < Headers.length; i++) {
 							valHead.add(Headers[i] + "-" + horaMexico);
 						}
 						valuesHeader.add(valHead);
@@ -419,16 +419,24 @@ public class GoogleImplV2 implements GoogleRestV2Service {
 								valItem.add(request.getObjectResult().get(j).getViews());
 								
 								//###_Insertando elementos de alcance Unexplored
-								for (Object itemAlc : request.getObjectResult().get(j).getDataAlcance()) {
-									HashMap<String,String> hashitemAlc = (HashMap<String,String>) itemAlc;
-									for ( Entry<String, String> itAlcEn : hashitemAlc.entrySet()) {
-										if (itAlcEn.getValue().toString().equals("Alcance")) {
-											valItem.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(hashitemAlc.get("Twitter"))));
-											valItem.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(hashitemAlc.get("Facebook"))));
-											valItem.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(hashitemAlc.get("Whatsapp"))));
-											valItem.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(hashitemAlc.get("Totales"))));
+								if(request.getObjectResult().get(j).getDataAlcance().size() > 0) {
+									for (Object itemAlc : request.getObjectResult().get(j).getDataAlcance()) {
+										HashMap<String,String> hashitemAlc = (HashMap<String,String>) itemAlc;
+										for ( Entry<String, String> itAlcEn : hashitemAlc.entrySet()) {
+											if (itAlcEn.getValue().toString().equals("Alcance")) {
+												valItem.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(hashitemAlc.get("Twitter"))));
+												valItem.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(hashitemAlc.get("Facebook"))));
+												valItem.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(hashitemAlc.get("Whatsapp"))));
+												valItem.add(Long.parseLong(CharMatcher.anyOf(charsToRetain).retainFrom(hashitemAlc.get("Totales"))));
+											}
 										}
 									}
+								}else {
+									valItem.add(0);
+									valItem.add(0);
+									valItem.add(0);
+									valItem.add(0);
+									valItem.add(0);
 								}
 								for (Object itemAlc : request.getObjectResult().get(j).getDataAlcance()) {
 									HashMap<String,String> hashitemAlc = (HashMap<String,String>) itemAlc;
@@ -451,6 +459,18 @@ public class GoogleImplV2 implements GoogleRestV2Service {
 									googleImpl.updateAndReplaceData(valuesDownload, RangeDown, request.getSpreadsheet_id());
 								}
 								
+								//Insertando Sentiment
+								if(request.getObjectResult().get(j).getSentiment() != null) {
+									valItem.add(request.getObjectResult().get(j).getSentiment().getPositive());
+									valItem.add(request.getObjectResult().get(j).getSentiment().getNegative());
+									valItem.add(request.getObjectResult().get(j).getSentiment().getNeutral());
+								}
+								else {
+									valItem.add(0);
+									valItem.add(0);
+									valItem.add(0);
+								}
+
 								
 								valuesItems.add(valItem);
 								if(existRegister) 

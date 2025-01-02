@@ -9,6 +9,7 @@ import java.util.Map.Entry;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.google.gson.Gson;
@@ -201,5 +202,17 @@ public class ToolsImpl implements ToolsService {
 			result.setMessage(ex.getMessage());
 			return result;
 		}
+	}
+
+	
+	public ResponseEntity<?> saveTeams(SaveTeamsRequest request) {
+		log.info("#########################---SAVE--TEAMS---#######################");
+		try {
+			
+		} catch (Exception ex) {
+			log.error("######################---ERROR-SAVE-TEAMS");
+			log.error(ex.getMessage());
+		}
+		return null;
 	}
 }
