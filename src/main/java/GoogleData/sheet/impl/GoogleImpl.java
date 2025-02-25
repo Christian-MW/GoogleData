@@ -140,6 +140,9 @@ public class GoogleImpl implements GoogleService {
 		log.info("=>Range: " + request.getRange());
 		log.info("=>Columns: " + request.getColumns());
 		try {
+			if(request.getRange().equals("Configuracion")){
+				request.setRange("Configuración");
+			}
 			String[] countColumns = request.getColumns().split(",");
 			Sheets service = getServiceSheet();
 	        ValueRange response = service.spreadsheets().values().get(request.getSpreadsheet_id(), request.getRange()).setKey(API_KEY).execute();
